@@ -11,6 +11,7 @@ function League() {
     const [searchParams] = useSearchParams();
     const tournament = searchParams.get("tournament");
     const sport = searchParams.get("sport");
+    console.log(tournament,sport);
 
     const [data, setData] = useState([]);
     const [showForm, setShowForm] = useState(false);
