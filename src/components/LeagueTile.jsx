@@ -25,7 +25,6 @@ const LeagueTile = ({ year, logo, teams }) => {
               alt={winner.name}
               className="w-32 h-32 object-contain rounded-xl mb-2"
             />
-            <p className="text-lg font-bold text-gray-800">{winner.name}</p>
           </div>
         </div>
       </div>
