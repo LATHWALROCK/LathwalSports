@@ -58,8 +58,8 @@ const LeagueTile = ({ title, logo, teams, onDelete }) => {
             {/* Winner Logo + Name */}
             <div className="flex flex-col items-center bg-green-50 p-2">
               <img
-                src={winner.image}
-                alt={winner.name}
+                src={winner.team.imageUrl}
+                alt={winner.team.name}
                 className="w-32 h-32 object-contain rounded-xl mb-2"
               />
             </div>
@@ -69,7 +69,7 @@ const LeagueTile = ({ title, logo, teams, onDelete }) => {
         {/* Grid of Teams */}
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
           {teams.map((team, idx) => (
-            <Team key={idx} title={team.name} image={team.image} />
+            <Team key={idx} title={team.team.name} image={team.team.imageUrl} />
           ))}
         </div>
       </div>

@@ -1,25 +1,16 @@
 const mongoose = require("mongoose")
 
 const teamSchema = new mongoose.Schema({
-    image: {
-        type: String,
-        required: true,
-    },
     position: {
         type: Number,
         required: true,
         min: 1,
     },
-    name: {
-        type: String,
+    team: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "team",
         required: true,
-        trim: true,
-    },
-    city: {
-        type: String,
-        required: true,
-        trim: true,
-    },
+      },
 });
 
 const leagueSchema = new mongoose.Schema(
