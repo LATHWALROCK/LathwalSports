@@ -21,9 +21,5 @@ export const teamEndpoints = {
 export const leagueEndpoints = {
   CREATE_LEAGUE: BASE_URL + "/post/createLeague",
   GET_LEAGUE: BASE_URL + "/post/getLeague",
-<<<<<<< HEAD
   DELETE_LEAGUE: BASE_URL + "/post/deleteLeague",
 }
-=======
-}
->>>>>>> 998bdd77afbc93ea00d39cc23d627932bc3d1084
