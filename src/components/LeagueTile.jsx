@@ -5,7 +5,6 @@ import Team from "../components/Team";
 const LeagueTile = ({ title, logo, teams, onDelete }) => {
   const winner = teams[0]; // assuming first team is winner
 
-<<<<<<< HEAD
   const [showConfirm, setShowConfirm] = useState(false);
   const [hovered, setHovered] = useState(false);
 
