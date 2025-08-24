@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:4000/api/v1"
+const BASE_URL = "https://lathwalsports-backend.onrender.com/api/v1"
 
 export const sportEndpoints = {
   CREATE_SPORT: BASE_URL + "/post/createSport",
@@ -21,5 +21,9 @@ export const teamEndpoints = {
 export const leagueEndpoints = {
   CREATE_LEAGUE: BASE_URL + "/post/createLeague",
   GET_LEAGUE: BASE_URL + "/post/getLeague",
+<<<<<<< HEAD
   DELETE_LEAGUE: BASE_URL + "/post/deleteLeague",
 }
+=======
+}
+>>>>>>> 998bdd77afbc93ea00d39cc23d627932bc3d1084

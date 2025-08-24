@@ -11,6 +11,7 @@ function League() {
     const [searchParams] = useSearchParams();
     const tournament = searchParams.get("tournament");
     const sport = searchParams.get("sport");
+    console.log(tournament,sport);
 
     const [data, setData] = useState([]);
     const [showForm, setShowForm] = useState(false);
@@ -165,7 +166,7 @@ function League() {
                                     className="w-full border border-gray-300 rounded-lg p-2"
                                     required
                                 >
-                                    {Array.from({ length: 25 }, (_, i) => new Date().getFullYear() - i).map(
+                                    {Array.from({ length: 200 }, (_, i) => new Date().getFullYear() - i).map(
                                         (year) => (
                                             <option key={year} value={year}>
                                                 {year}

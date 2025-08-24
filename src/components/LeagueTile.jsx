@@ -5,6 +5,7 @@ import Team from "../components/Team";
 const LeagueTile = ({ title, logo, teams, onDelete }) => {
   const winner = teams[0]; // assuming first team is winner
 
+<<<<<<< HEAD
   const [showConfirm, setShowConfirm] = useState(false);
   const [hovered, setHovered] = useState(false);
 
@@ -63,6 +64,29 @@ const LeagueTile = ({ title, logo, teams, onDelete }) => {
                 className="w-32 h-32 object-contain rounded-xl mb-2"
               />
             </div>
+=======
+  return (
+    <div className="bg-white shadow-md rounded-2xl p-6 mb-6">
+      {/* First Row: League Logo + Year & Winner */}
+      <div className="flex flex-col items-center mb-10">
+        <div className="flex items-center gap-16">
+          {/* League Logo + Year */}
+          <div className="flex flex-col items-center">
+            <img
+              src={logo}
+              alt="League Logo"
+              className="w-32 h-32 object-contain rounded-xl mb-2"
+            />
+          </div>
+
+          {/* Winner Logo + Name */}
+          <div className="flex flex-col items-center bg-green-50 p-2">
+            <img
+              src={winner.image}
+              alt={winner.name}
+              className="w-32 h-32 object-contain rounded-xl mb-2"
+            />
+>>>>>>> 998bdd77afbc93ea00d39cc23d627932bc3d1084
           </div>
         </div>
 
