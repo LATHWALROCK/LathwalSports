@@ -1,10 +1,8 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { Trash2 } from "lucide-react";
-import Team from "../components/Team";
 
-const LeagueTile = ({ title, logo, teams, onDelete }) => {
-  const winner = teams[0]; // assuming first team is winner
-
+const Team = ({ title, image, city, onDelete }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [hovered, setHovered] = useState(false);
 
@@ -17,7 +15,7 @@ const LeagueTile = ({ title, logo, teams, onDelete }) => {
   const handleConfirm = (e) => {
     e.stopPropagation();
     e.preventDefault();
-    onDelete(title);
+    onDelete(title, city);
     setShowConfirm(false);
   };
 
@@ -28,7 +26,6 @@ const LeagueTile = ({ title, logo, teams, onDelete }) => {
   };
 
   return (
-
     <div className="relative">
       {/* Delete Button */}
       {!showConfirm && hovered && (<button
@@ -40,39 +37,24 @@ const LeagueTile = ({ title, logo, teams, onDelete }) => {
         <Trash2 size={20} />
       </button>)}
 
-      <div className="bg-white shadow-md rounded-2xl p-6 mb-6"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}>
-        {/* First Row: League Logo + Year & Winner */}
-        <div className="flex flex-col items-center mb-10">
-          <div className="flex items-center gap-16">
-            {/* League Logo + Year */}
-            <div className="flex flex-col items-center">
-              <img
-                src={logo}
-                alt="League Logo"
-                className="w-32 h-32 object-contain rounded-xl mb-2"
-              />
-            </div>
-
-            {/* Winner Logo + Name */}
-            <div className="flex flex-col items-center bg-green-50 p-2">
-              <img
-                src={winner.image}
-                alt={winner.name}
-                className="w-32 h-32 object-contain rounded-xl mb-2"
-              />
-            </div>
+      {/* Tile with Link */}
+        <div
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          className="bg-white shadow-md rounded-2xl p-6 flex flex-col items-center 
+                 justify-between text-lg font-semibold text-gray-700 hover:shadow-xl 
+                 hover:scale-105 transition-all duration-300 cursor-pointer h-64 w-full"
+        >
+          <div className="w-full h-40 flex items-center justify-center p-2 bg-gray-50 rounded-lg">
+            <img
+              src={image}
+              alt={title}
+              className="max-h-full max-w-full object-contain"
+            />
           </div>
-        </div>
 
-        {/* Grid of Teams */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-          {teams.map((team, idx) => (
-            <Team key={idx} title={team.name} image={team.image} />
-          ))}
+          <p className="text-center mt-2">{title}</p>
         </div>
-      </div>
 
       {/* Confirmation Box */}
       {showConfirm && (
@@ -98,4 +80,4 @@ const LeagueTile = ({ title, logo, teams, onDelete }) => {
   );
 };
 
-export default LeagueTile;
+export default Team;

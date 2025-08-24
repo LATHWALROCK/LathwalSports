@@ -1,12 +1,15 @@
-const express = require("express")
-const router = express.Router()
+const express = require("express");
+const router = express.Router();
 
 const {
-    createSport,
-    getSport
-} = require("../controllers/Sport")
+  createSport,
+  getSport,
+  deleteSport
+} = require("../controllers/Sport");
 
-router.post("/createSport", createSport)
-router.get("/getSport",getSport)
+// Routes
+router.post("/createSport", createSport);
+router.get("/getSport", getSport);
+router.delete("/deleteSport", deleteSport);
 
-module.exports = router
+module.exports = router;

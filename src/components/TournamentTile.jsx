@@ -1,25 +1,84 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { Trash2 } from "lucide-react";
 
-const Tournament = ({ title, image, sport }) => {
+const Tournament = ({ title, image, sport, onDelete }) => {
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
+  const handleDeleteClick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setShowConfirm(true); // show confirm box on tile
+  };
+
+  const handleConfirm = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onDelete(title, sport);
+    setShowConfirm(false);
+  };
+
+  const handleCancel = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setShowConfirm(false);
+  };
+
   return (
-    <Link to={`/leagues?sport=${sport}&tournament=${title}`}>
-    <div
-      className="bg-white shadow-md rounded-2xl p-6 flex flex-col items-center 
+    <div className="relative">
+      {/* Delete Button */}
+      {!showConfirm && hovered && (<button
+        onClick={handleDeleteClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className="absolute top-2 right-2 z-10 bg-red-500 text-black rounded-full p-1 hover:bg-red-600"
+      >
+        <Trash2 size={20} />
+      </button>)}
+
+      {/* Tile with Link */}
+      <Link to={`/leagues?sport=${sport}&tournament=${title}`}>
+        <div
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          className="bg-white shadow-md rounded-2xl p-6 flex flex-col items-center 
                  justify-between text-lg font-semibold text-gray-700 hover:shadow-xl 
                  hover:scale-105 transition-all duration-300 cursor-pointer h-64 w-full"
-    >
-      <div className="w-full h-40 flex items-center justify-center p-2 bg-gray-50 rounded-lg">
-        <img
-          src={image}
-          alt={title}
-          className="max-h-full max-w-full object-contain"
-        />
-      </div>
+        >
+          <div className="w-full h-40 flex items-center justify-center p-2 bg-gray-50 rounded-lg">
+            <img
+              src={image}
+              alt={title}
+              className="max-h-full max-w-full object-contain"
+            />
+          </div>
 
-      <p className="text-center mt-2">{title}</p>
+          <p className="text-center mt-2">{title}</p>
+        </div>
+      </Link>
+
+      {/* Confirmation Box */}
+      {showConfirm && (
+        <div className="absolute inset-0 bg-white rounded-2xl flex flex-col items-center justify-center shadow-lg">
+          <p className="text-gray-800 font-medium">Delete "{title}"?</p>
+          <div className="flex gap-3">
+            <button
+              onClick={handleConfirm}
+              className="px-3 py-1 bg-red-500 text-gray-700e rounded-lg hover:bg-red-600"
+            >
+              Yes
+            </button>
+            <button
+              onClick={handleCancel}
+              className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+            >
+              No
+            </button>
+          </div>
+        </div>
+      )}
     </div>
-    </Link>
   );
 };
 

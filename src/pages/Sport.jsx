@@ -4,7 +4,7 @@ import { apiConnector } from "../services/apiConnector";
 import IndividualSport from "../components/Sport";
 import { sportEndpoints } from "../services/apis";
 
-const { GET_SPORT, CREATE_SPORT } = sportEndpoints;
+const { GET_SPORT, CREATE_SPORT, DELETE_SPORT  } = sportEndpoints;
 
 function Sport() {
   const [data, setData] = useState([]);
@@ -53,6 +53,25 @@ function Sport() {
     }
   };
 
+  const handleDelete = async (name) => {
+    
+    const toastId = toast.loading("Deleting sport...");
+    try {
+      const response = await apiConnector("DELETE", DELETE_SPORT, {name});
+      if (!response.data.success) {
+        throw new Error(response.data.message);
+      }
+
+      toast.success("Sport deleted successfully");
+      fetchData();
+    } catch (error) {
+      console.error("DELETE SPORT ERROR:", error);
+      toast.error("Sport deletion failed");
+    } finally {
+      toast.dismiss(toastId);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -68,7 +87,7 @@ function Sport() {
         <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-6">
           {data.map((sport) => (
             <li key={sport._id}>
-              <IndividualSport title={sport.name} />
+              <IndividualSport title={sport.name} onDelete={handleDelete}/>
             </li>
           ))}
         </ul>

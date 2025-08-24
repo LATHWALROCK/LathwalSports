@@ -1,30 +1,25 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { apiConnector } from "../services/apiConnector";
-import IndividualTournament from "../components/TournamentTile";
-import { tournamentEndpoints } from "../services/apis";
-import { useSearchParams } from "react-router-dom";
+import IndividualTeam from "../components/TeamTile";
+import { teamEndpoints } from "../services/apis";
 
-const { GET_TOURNAMENT, CREATE_TOURNAMENT, DELETE_TOURNAMENT } = tournamentEndpoints;
+const { GET_TEAM, CREATE_TEAM, DELETE_TEAM } = teamEndpoints;
 
-function Tournament() {
-  const [searchParams] = useSearchParams();
-  const sport = searchParams.get("sport");
+function Team() {
   const [data, setData] = useState([]);
-  const [formData, setFormData] = useState({ name: "", type: "" });
+  const [formData, setFormData] = useState({ name: "", city: "" });
   const [image, setImage] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const { name, type } = formData;
+  const { name, city } = formData;
 
   const fetchData = async () => {
     try {
-      const response = await apiConnector("GET", GET_TOURNAMENT, null, null, {
-        sport: sport,
-      });
+      const response = await apiConnector("GET", GET_TEAM);
       setData(response.data.data);
     } catch (error) {
-      toast.error("Failed to fetch tournaments");
-      console.error("FETCH TOURNAMENTS ERROR:", error);
+      toast.error("Failed to fetch team");
+      console.error("FETCH TEAMS ERROR:", error);
     }
   };
 
@@ -32,21 +27,21 @@ function Tournament() {
     setFormData((prevData) => ({
       ...prevData,
       [e.target.name]: e.target.value,
+      [e.target.city]: e.target.value,
     }));
   };
 
   const handleOnSubmit = async (e) => {
     e.preventDefault();
-    const toastId = toast.loading("Creating tournament...");
+    const toastId = toast.loading("Creating team...");
 
     try {
       const formDataObj = new FormData();
       formDataObj.append("name", name);
-      formDataObj.append("sport", sport);
+      formDataObj.append("city", city);
       formDataObj.append("image", image);
-      formDataObj.append("type", type);
 
-      const response = await apiConnector("POST", CREATE_TOURNAMENT, formDataObj, {
+      const response = await apiConnector("POST", CREATE_TEAM, formDataObj, {
         "Content-Type": "multipart/form-data",
       });
 
@@ -54,33 +49,33 @@ function Tournament() {
         throw new Error(response.data.message);
       }
 
-      toast.success("Tournament created successfully");
-      setFormData({ name: "", type: "" });
+      toast.success("Team created successfully");
+      setFormData({ name: "", city: "" });
       setImage(false);
       setShowForm(false);
       fetchData();
     } catch (error) {
-      console.error("CREATE TOURNAMENT ERROR:", error);
-      toast.error("Tournament creation failed");
+      console.error("CREATE TEAM ERROR:", error);
+      toast.error("Team creation failed");
     } finally {
       toast.dismiss(toastId);
     }
   };
 
-  const handleDelete = async (name,sport) => {
+  const handleDelete = async (name,city) => {
     
-    const toastId = toast.loading("Deleting tournament...");
+    const toastId = toast.loading("Deleting Team...");
     try {
-      const response = await apiConnector("DELETE", DELETE_TOURNAMENT, {name,sport});
+      const response = await apiConnector("DELETE", DELETE_TEAM, {name,city});
       if (!response.data.success) {
         throw new Error(response.data.message);
       }
 
-      toast.success("Tournament deleted successfully");
+      toast.success("Team deleted successfully");
       fetchData();
     } catch (error) {
-      console.error("DELETE Tournament ERROR:", error);
-      toast.error("Tournament deletion failed");
+      console.error("DELETE TEAM ERROR:", error);
+      toast.error("Team deletion failed");
     } finally {
       toast.dismiss(toastId);
     }
@@ -90,42 +85,22 @@ function Tournament() {
     fetchData();
   }, []);
 
-  // 🔹 Group tournaments by type
-  const groupedData = data.reduce((groups, tournament) => {
-    if (!groups[tournament.type]) groups[tournament.type] = [];
-    groups[tournament.type].push(tournament);
-    return groups;
-  }, {});
-
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4">
       <div className="max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
-          Tournaments for {sport}
+          Teams
         </h1>
 
-        {/* Render grouped tournaments */}
-        {Object.keys(groupedData).map((type) => (
-          <div key={type} className="mb-10">
-            <h2 className="text-2xl font-semibold text-gray-700 mb-4">
-              {type}
-            </h2>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {groupedData[type].map((tournament) => (
-                <li key={tournament._id}>
-                  <IndividualTournament
-                    title={tournament.name}
-                    image={tournament.imageUrl}
-                    sport={sport}
-                    onDelete={handleDelete}
-                  />
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+        <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-6">
+          {data.map((team) => (
+            <li key={team._id}>
+              <IndividualTeam title={team.name} image={team.imageUrl} city={team.city} onDelete={handleDelete}/>
+            </li>
+          ))}
+        </ul>
 
-        {/* Add Tournament button / form */}
+        {/* Add Team button / form */}
         {!showForm ? (
           <button
             onClick={() => setShowForm(true)}
@@ -133,7 +108,7 @@ function Tournament() {
             text-2xl font-bold text-gray-700 hover:shadow-xl hover:scale-[1.02] 
             transition-all duration-300 cursor-pointer"
           >
-            + Add Tournament
+            + Add Team
           </button>
         ) : (
           <form
@@ -153,10 +128,10 @@ function Tournament() {
             />
             <input
               type="text"
-              name="type"
-              value={type}
+              name="city"
+              value={city}
               onChange={handleOnChange}
-              placeholder="Enter tournament type"
+              placeholder="Enter team city"
               className="w-full border border-gray-300 rounded-lg p-2 
               focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
@@ -193,4 +168,4 @@ function Tournament() {
   );
 }
 
-export default Tournament;
+export default Team;

@@ -5,7 +5,7 @@ import { leagueEndpoints } from "../services/apis";
 import IndividualLeague from "../components/LeagueTile";
 import { useSearchParams } from "react-router-dom";
 
-const { GET_LEAGUE, CREATE_LEAGUE } = leagueEndpoints;
+const { GET_LEAGUE, CREATE_LEAGUE, DELETE_LEAGUE } = leagueEndpoints;
 
 function League() {
     const [searchParams] = useSearchParams();
@@ -96,6 +96,25 @@ function League() {
         }
     };
 
+    const handleDelete = async (name) => {
+    
+        const toastId = toast.loading("Deleting league...");
+        try {
+          const response = await apiConnector("DELETE", DELETE_LEAGUE, {name,sport,tournament});
+          if (!response.data.success) {
+            throw new Error(response.data.message);
+          }
+    
+          toast.success("League deleted successfully");
+          fetchData();
+        } catch (error) {
+          console.error("DELETE League ERROR:", error);
+          toast.error("League deletion failed");
+        } finally {
+          toast.dismiss(toastId);
+        }
+      };
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -111,7 +130,7 @@ function League() {
                 <ul className="grid grid-cols-1 gap-6 mb-6">
                     {data.map((league) => (
                         <li key={league._id}>
-                            <IndividualLeague year={league.year} logo={league.leagueImageUrl} teams={league.teams} />
+                            <IndividualLeague title={league.name} logo={league.leagueImageUrl} teams={league.teams} onDelete={handleDelete}/>
                         </li>
                     ))}
                 </ul>

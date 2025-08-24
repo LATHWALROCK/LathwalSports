@@ -1,9 +1,9 @@
-const Tournament = require("../models/Tournament")
+const Team = require("../models/Team")
 const cloudinary = require("cloudinary").v2;
 
-exports.createTournament = async (req, res) => {
+exports.createTeam = async (req, res) => {
     try {
-        const { name, sport, type } = req.body;
+        const { name, city } = req.body;
 
         // check file
         const file = req.files?.image;
@@ -13,47 +13,45 @@ exports.createTournament = async (req, res) => {
                 message: "Image file is required",
             });
         }
-        const folder = "tournaments";
+        const folder = "teams";
         const options = { folder };
         const result = await cloudinary.uploader.upload(file.tempFilePath, options);
         const imageUrl = result.secure_url;
 
-        if (!name || !sport || !imageUrl || !type) {
+        if (!name || !city || !imageUrl) {
             return res.status(403).json({
                 success: false,
                 message: "All fields are required",
             });
         }
-        const tournament = await Tournament.create({
+        const team = await Team.create({
             name,
-            sport,
-            imageUrl,
-            type
+            city,
+            imageUrl
         });
 
         return res.status(200).json({
             success: true,
-            tournament,
-            message: "Tournament created successfully",
+            team,
+            message: "Team created successfully",
         });
     } catch (error) {
-        console.error("CREATE TOURNAMENT ERROR:", error);
+        console.error("CREATE Team ERROR:", error);
         return res.status(500).json({
             success: false,
-            message: "Tournament cannot be created. Please try again.",
+            message: "Team cannot be created. Please try again.",
         });
     }
 };
 
-exports.getTournament = async (req, res) => {
+exports.getTeam = async (req, res) => {
     try {
-        const { sport } = req.query;
-        const tournaments = await Tournament.find({ sport: sport });
+        const teams = await Team.find({});
         res.status(200).json(
             {
                 success: true,
-                data: tournaments,
-                message: 'All tournaments data are fetched'
+                data: teams,
+                message: 'All teams data are fetched'
             }
         )
     }
@@ -70,34 +68,34 @@ exports.getTournament = async (req, res) => {
     }
 }
 
-exports.deleteTournament = async (req, res) => {
+exports.deleteTeam = async (req, res) => {
     try {
-        const { name, sport } = req.body;
+        const { name, city } = req.body;
         if (!name) {
             return res.status(400).json({
                 success: false,
-                message: "Tournament name is required",
+                message: "Team name is required",
             });
         }
 
-        const deletedTournament = await Tournament.findOneAndDelete({ name,sport });
+        const deletedTeam = await Team.findOneAndDelete({ name,city });
 
-        if (!deletedTournament) {
+        if (!deletedTeam) {
             return res.status(404).json({
                 success: false,
-                message: "Tournament not found",
+                message: "Team not found",
             });
         }
 
         return res.status(200).json({
             success: true,
-            message: `Tournament '${name}' deleted successfully`,
+            message: `Team '${name}' deleted successfully`,
         });
     } catch (error) {
         console.error(error);
         return res.status(500).json({
             success: false,
-            message: "Server error while deleting sport",
+            message: "Server error while deleting team",
         });
     }
 }

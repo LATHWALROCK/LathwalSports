@@ -3,6 +3,7 @@ const express = require("express");
 const app = express();
 const sportRoutes = require("./routes/sport");
 const tournamentRoutes = require("./routes/tournament");
+const teamRoutes = require("./routes/team");
 const leagueRoutes = require("./routes/leagues");
 const database = require("./config/database");
 const cookieParser = require("cookie-parser");
@@ -43,6 +44,7 @@ cloudinaryConnect();
 app.use("/api/v1/post", sportRoutes);
 app.use("/api/v1/post", tournamentRoutes);
 app.use("/api/v1/post", leagueRoutes);
+app.use("/api/v1/post", teamRoutes);
 
 // Testing the server
 app.get("/", (req, res) => {
