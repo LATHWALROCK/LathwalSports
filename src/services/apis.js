@@ -1,4 +1,4 @@
-const BASE_URL = "https://lathwalsports-backend.onrender.com"
+const BASE_URL = "https://lathwalsports-backend.onrender.com/api/v1"
 
 export const sportEndpoints = {
   CREATE_SPORT: BASE_URL + "/post/createSport",
