@@ -51,7 +51,7 @@ exports.createLeague = async (req, res) => {
 
       teams.push({
         team: teamId,
-        position: position ? Number(position) : idx + 1, // default position if not sent
+        position: position ? Number(position) : idx + 1,
       });
     }
 
@@ -84,12 +84,15 @@ exports.getLeague = async (req, res) => {
     const { sport, tournament } = req.query;
 
     const leagues = await League.find({ sport, tournament })
-      .populate("teams.team"); // populate team details (name, city, imageUrl)
+      .populate("teams.team")
+      .populate("sport")
+      .populate("tournament")
+      .sort({ year: -1 });
 
     res.status(200).json({
       success: true,
       data: leagues,
-      message: "All leagues data fetched",
+      message: "All leagues data fetched in order of year",
     });
   } catch (err) {
     console.error("GET LEAGUE ERROR:", err);
@@ -101,9 +104,10 @@ exports.getLeague = async (req, res) => {
   }
 };
 
+
 exports.deleteLeague = async (req, res) => {
   try {
-    const { name, sport, tournament } = req.body;
+    const { name, _id } = req.body;
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -111,7 +115,7 @@ exports.deleteLeague = async (req, res) => {
       });
     }
 
-    const deletedLeague = await League.findOneAndDelete({ name, sport, tournament });
+    const deletedLeague = await League.findOneAndDelete({ name, _id });
 
     if (!deletedLeague) {
       return res.status(404).json({

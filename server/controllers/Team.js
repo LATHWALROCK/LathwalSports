@@ -3,9 +3,7 @@ const cloudinary = require("cloudinary").v2;
 
 exports.createTeam = async (req, res) => {
     try {
-        const { name, city } = req.body;
-
-        // check file
+        const { name, city, sport, tournament } = req.body;
         const file = req.files?.image;
         if (!file) {
             return res.status(400).json({
@@ -27,7 +25,9 @@ exports.createTeam = async (req, res) => {
         const team = await Team.create({
             name,
             city,
-            imageUrl
+            imageUrl,
+            sport,
+            tournament
         });
 
         return res.status(200).json({
@@ -46,31 +46,30 @@ exports.createTeam = async (req, res) => {
 
 exports.getTeam = async (req, res) => {
     try {
-        const teams = await Team.find({});
-        res.status(200).json(
-            {
-                success: true,
-                data: teams,
-                message: 'All teams data are fetched'
-            }
-        )
-    }
-    catch (err) {
+        const teams = await Team.find({})
+            .populate("sport")
+            .populate("tournament")
+            .sort({ name: 1 }); // 🔹 1 = ascending, -1 = descending
+
+        res.status(200).json({
+            success: true,
+            data: teams,
+            message: 'All teams data fetched in alphabetical order'
+        });
+    } catch (err) {
         console.error(err);
-        console.log(err);
-        res.status(500).json(
-            {
-                success: false,
-                error: err.message,
-                message: 'Server error'
-            }
-        )
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            message: 'Server error'
+        });
     }
-}
+};
+
 
 exports.deleteTeam = async (req, res) => {
     try {
-        const { name, city } = req.body;
+        const { _id, name } = req.body;
         if (!name) {
             return res.status(400).json({
                 success: false,
@@ -78,7 +77,7 @@ exports.deleteTeam = async (req, res) => {
             });
         }
 
-        const deletedTeam = await Team.findOneAndDelete({ name,city });
+        const deletedTeam = await Team.findOneAndDelete({ _id });
 
         if (!deletedTeam) {
             return res.status(404).json({

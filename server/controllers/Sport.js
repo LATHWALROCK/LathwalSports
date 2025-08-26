@@ -60,15 +60,15 @@ exports.getSport = async (req, res) => {
 
 exports.deleteSport = async (req, res) => {
     try {
-        const { name } = req.body;
-        if (!name) {
+        const { name,_id } = req.body;
+        if (!_id) {
             return res.status(400).json({
                 success: false,
-                message: "Sport name is required",
+                message: "Sport is required",
             });
         }
 
-        const deletedSport = await Sport.findOneAndDelete({ name });
+        const deletedSport = await Sport.findOneAndDelete({ _id });
 
         if (!deletedSport) {
             return res.status(404).json({

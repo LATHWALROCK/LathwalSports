@@ -16,6 +16,16 @@ const teamSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    sport: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "sport",
+      required: true,
+    },
+    tournament: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "tournament",
+      required: true,
+    },
   },
   { timestamps: true }
 )

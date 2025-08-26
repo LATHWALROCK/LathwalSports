@@ -8,9 +8,9 @@ const tournamentSchema = new mongoose.Schema(
       trim: true,
     },
     sport: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "sport",
       required: true,
-      trim: true,
     },
     imageUrl: {
       type: String,
@@ -21,7 +21,12 @@ const tournamentSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-    }
+    },
+    priority: {
+      type: Number,
+      required: true,
+      min: 1,
+  },
   },
   { timestamps: true }
 );

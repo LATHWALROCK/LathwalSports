@@ -12,15 +12,17 @@ function Sport() {
   const [showForm, setShowForm] = useState(false);
   const { name } = formData;
 
-  const fetchData = async () => {
-    try {
-      const response = await fetch(GET_SPORT);
-      const result = await response.json();
-      setData(result.data);
-    } catch (error) {
-      toast.error("Failed to fetch sports");
-      console.error("FETCH SPORTS ERROR:", error);
-    }
+  // 🔹 Fetch Sports
+  const fetchData = () => {
+    fetch(GET_SPORT)
+      .then((response) => response.json())
+      .then((result) => {
+        setData(result.data);
+      })
+      .catch((error) => {
+        toast.error("Failed to fetch sports");
+        console.error("FETCH SPORTS ERROR:", error);
+      });
   };
 
   const handleOnChange = (e) => {
@@ -30,45 +32,49 @@ function Sport() {
     }));
   };
 
-  const handleOnSubmit = async (e) => {
+  // 🔹 Create Sport
+  const handleOnSubmit = (e) => {
     e.preventDefault();
     const toastId = toast.loading("Creating sport...");
 
-    try {
-      const response = await apiConnector("POST", CREATE_SPORT, { name });
-
-      if (!response.data.success) {
-        throw new Error(response.data.message);
-      }
-
-      toast.success("Sport created successfully");
-      setFormData({ name: "" });
-      setShowForm(false);
-      fetchData();
-    } catch (error) {
-      console.error("CREATE SPORT ERROR:", error);
-      toast.error("Sport creation failed");
-    } finally {
-      toast.dismiss(toastId);
-    }
+    apiConnector("POST", CREATE_SPORT, { name })
+      .then((response) => {
+        if (!response.data.success) {
+          throw new Error(response.data.message);
+        }
+        toast.success("Sport created successfully");
+        setFormData({ name: "" });
+        setShowForm(false);
+        fetchData();
+      })
+      .catch((error) => {
+        console.error("CREATE SPORT ERROR:", error);
+        toast.error("Sport creation failed");
+      })
+      .finally(() => {
+        toast.dismiss(toastId);
+      });
   };
 
-  const handleDelete = async (name) => {
+  // 🔹 Delete Sport
+  const handleDelete = (_id) => {
     const toastId = toast.loading("Deleting sport...");
-    try {
-      const response = await apiConnector("DELETE", DELETE_SPORT, { name });
-      if (!response.data.success) {
-        throw new Error(response.data.message);
-      }
 
-      toast.success("Sport deleted successfully");
-      fetchData();
-    } catch (error) {
-      console.error("DELETE SPORT ERROR:", error);
-      toast.error("Sport deletion failed");
-    } finally {
-      toast.dismiss(toastId);
-    }
+    apiConnector("DELETE", DELETE_SPORT, { _id })
+      .then((response) => {
+        if (!response.data.success) {
+          throw new Error(response.data.message);
+        }
+        toast.success("Sport deleted successfully");
+        fetchData();
+      })
+      .catch((error) => {
+        console.error("DELETE SPORT ERROR:", error);
+        toast.error("Sport deletion failed");
+      })
+      .finally(() => {
+        toast.dismiss(toastId);
+      });
   };
 
   useEffect(() => {
@@ -86,7 +92,11 @@ function Sport() {
         <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-6">
           {data.map((sport) => (
             <li key={sport._id}>
-              <IndividualSport title={sport.name} onDelete={handleDelete} />
+              <IndividualSport
+                title={sport.name}
+                _id={sport._id}
+                onDelete={handleDelete}
+              />
             </li>
           ))}
         </ul>

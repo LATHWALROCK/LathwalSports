@@ -5,27 +5,28 @@ import IndividualTournament from "../components/TournamentTile";
 import { tournamentEndpoints } from "../services/apis";
 import { useSearchParams } from "react-router-dom";
 
-const { GET_TOURNAMENT, CREATE_TOURNAMENT, DELETE_TOURNAMENT } = tournamentEndpoints;
+const { GET_TOURNAMENT, CREATE_TOURNAMENT, DELETE_TOURNAMENT } =
+  tournamentEndpoints;
 
 function Tournament() {
   const [searchParams] = useSearchParams();
   const sport = searchParams.get("sport");
   const [data, setData] = useState([]);
-  const [formData, setFormData] = useState({ name: "", type: "" });
+  const [formData, setFormData] = useState({ name: "", type: "", priority: 1 });
   const [image, setImage] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const { name, type } = formData;
 
-  const fetchData = async () => {
-    try {
-      const response = await apiConnector("GET", GET_TOURNAMENT, null, null, {
-        sport: sport,
+  const { name, type, priority } = formData;
+
+  const fetchData = () => {
+    apiConnector("GET", GET_TOURNAMENT, null, null, { sport })
+      .then((response) => {
+        setData(response.data.data);
+      })
+      .catch((error) => {
+        toast.error("Failed to fetch tournaments");
+        console.error("FETCH TOURNAMENTS ERROR:", error);
       });
-      setData(response.data.data);
-    } catch (error) {
-      toast.error("Failed to fetch tournaments");
-      console.error("FETCH TOURNAMENTS ERROR:", error);
-    }
   };
 
   const handleOnChange = (e) => {
@@ -35,54 +36,58 @@ function Tournament() {
     }));
   };
 
-  const handleOnSubmit = async (e) => {
+  const handleOnSubmit = (e) => {
     e.preventDefault();
     const toastId = toast.loading("Creating tournament...");
 
-    try {
-      const formDataObj = new FormData();
-      formDataObj.append("name", name);
-      formDataObj.append("sport", sport);
-      formDataObj.append("image", image);
-      formDataObj.append("type", type);
+    const formDataObj = new FormData();
+    formDataObj.append("name", name);
+    formDataObj.append("sport", sport);
+    formDataObj.append("image", image);
+    formDataObj.append("type", type);
+    formDataObj.append("priority", priority);
 
-      const response = await apiConnector("POST", CREATE_TOURNAMENT, formDataObj, {
-        "Content-Type": "multipart/form-data",
+    apiConnector("POST", CREATE_TOURNAMENT, formDataObj, {
+      "Content-Type": "multipart/form-data",
+    })
+      .then((response) => {
+        if (!response.data.success) {
+          throw new Error(response.data.message);
+        }
+
+        toast.success("Tournament created successfully");
+        setFormData({ name: "", type: "", priority: 1 });
+        setImage(null);
+        setShowForm(false);
+        fetchData();
+      })
+      .catch((error) => {
+        console.error("CREATE TOURNAMENT ERROR:", error);
+        toast.error("Tournament creation failed");
+      })
+      .finally(() => {
+        toast.dismiss(toastId);
       });
-
-      if (!response.data.success) {
-        throw new Error(response.data.message);
-      }
-
-      toast.success("Tournament created successfully");
-      setFormData({ name: "", type: "" });
-      setImage(null);
-      setShowForm(false);
-      fetchData();
-    } catch (error) {
-      console.error("CREATE TOURNAMENT ERROR:", error);
-      toast.error("Tournament creation failed");
-    } finally {
-      toast.dismiss(toastId);
-    }
   };
 
-  const handleDelete = async (name, sport) => {
+  const handleDelete = (name, _id) => {
     const toastId = toast.loading("Deleting tournament...");
-    try {
-      const response = await apiConnector("DELETE", DELETE_TOURNAMENT, { name, sport });
-      if (!response.data.success) {
-        throw new Error(response.data.message);
-      }
 
-      toast.success("Tournament deleted successfully");
-      fetchData();
-    } catch (error) {
-      console.error("DELETE Tournament ERROR:", error);
-      toast.error("Tournament deletion failed");
-    } finally {
-      toast.dismiss(toastId);
-    }
+    apiConnector("DELETE", DELETE_TOURNAMENT, { name, _id })
+      .then((response) => {
+        if (!response.data.success) {
+          throw new Error(response.data.message);
+        }
+        toast.success("Tournament deleted successfully");
+        fetchData();
+      })
+      .catch((error) => {
+        console.error("DELETE TOURNAMENT ERROR:", error);
+        toast.error("Tournament deletion failed");
+      })
+      .finally(() => {
+        toast.dismiss(toastId);
+      });
   };
 
   useEffect(() => {
@@ -100,7 +105,7 @@ function Tournament() {
     <div className="min-h-screen bg-gray-100 py-10 px-4">
       <div className="max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
-          Tournaments for {sport}
+          Tournaments
         </h1>
 
         {/* Render grouped tournaments */}
@@ -114,6 +119,7 @@ function Tournament() {
                     title={tournament.name}
                     image={tournament.imageUrl}
                     sport={sport}
+                    _id={tournament._id}
                     onDelete={handleDelete}
                   />
                 </li>
@@ -154,6 +160,19 @@ function Tournament() {
                   value={type}
                   onChange={handleOnChange}
                   placeholder="Enter tournament type"
+                  className="w-full border border-gray-300 rounded-lg p-2 
+                  focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+
+                {/* 🔹 Priority Number Input */}
+                <input
+                  type="number"
+                  name="priority"
+                  value={priority}
+                  onChange={handleOnChange}
+                  min="1"
+                  placeholder="Enter priority (min 1)"
                   className="w-full border border-gray-300 rounded-lg p-2 
                   focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required

@@ -10,7 +10,7 @@ const teamSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "team",
         required: true,
-      },
+    },
 });
 
 const leagueSchema = new mongoose.Schema(
@@ -25,14 +25,14 @@ const leagueSchema = new mongoose.Schema(
             required: true,
         },
         sport: {
-            type: String,
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "sport",
             required: true,
-            trim: true,
         },
         tournament: {
-            type: String,
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "tournament",
             required: true,
-            trim: true,
         },
         leagueImageUrl: {
             type: String,

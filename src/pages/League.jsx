@@ -39,10 +39,7 @@ function League() {
   // Fetch leagues
   const fetchData = async () => {
     try {
-      const response = await apiConnector("GET", GET_LEAGUE, null, null, {
-        sport,
-        tournament,
-      });
+      const response = await apiConnector("GET", GET_LEAGUE, null, null, { sport, tournament });
       console.log(response.data.data);
       setData(response.data.data);
     } catch (error) {
@@ -101,14 +98,10 @@ function League() {
     }
   };
 
-  const handleDelete = async (name) => {
+  const handleDelete = async (name, _id) => {
     const toastId = toast.loading("Deleting league...");
     try {
-      const response = await apiConnector("DELETE", DELETE_LEAGUE, {
-        name,
-        sport,
-        tournament,
-      });
+      const response = await apiConnector("DELETE", DELETE_LEAGUE, { name, _id });
       if (!response.data.success) throw new Error(response.data.message);
 
       toast.success("League deleted successfully");
@@ -141,6 +134,7 @@ function League() {
                 title={league.name}
                 logo={league.leagueImageUrl}
                 teams={league.teams}
+                _id = {league._id}
                 onDelete={handleDelete}
               />
             </li>

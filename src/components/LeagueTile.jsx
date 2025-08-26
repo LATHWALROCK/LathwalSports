@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Trash2 } from "lucide-react";
 import Team from "../components/Team";
 
-const LeagueTile = ({ title, logo, teams, onDelete }) => {
+const LeagueTile = ({ title, logo, teams,_id, onDelete }) => {
   const winner = teams[0]; // assuming first team is winner
 
   const [showConfirm, setShowConfirm] = useState(false);
@@ -17,7 +17,7 @@ const LeagueTile = ({ title, logo, teams, onDelete }) => {
   const handleConfirm = (e) => {
     e.stopPropagation();
     e.preventDefault();
-    onDelete(title);
+    onDelete(title, _id);
     setShowConfirm(false);
   };
 

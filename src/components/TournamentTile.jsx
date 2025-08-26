@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 
-const Tournament = ({ title, image, sport, onDelete }) => {
+const Tournament = ({ title, image, sport, _id, onDelete }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [hovered, setHovered] = useState(false);
 
@@ -15,7 +15,7 @@ const Tournament = ({ title, image, sport, onDelete }) => {
   const handleConfirm = (e) => {
     e.stopPropagation();
     e.preventDefault();
-    onDelete(title, sport);
+    onDelete(title, _id);
     setShowConfirm(false);
   };
 
@@ -38,7 +38,7 @@ const Tournament = ({ title, image, sport, onDelete }) => {
       </button>)}
 
       {/* Tile with Link */}
-      <Link to={`/leagues?sport=${sport}&tournament=${title}`}>
+      <Link to={`/leagues?sport=${sport}&tournament=${_id}`}>
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}

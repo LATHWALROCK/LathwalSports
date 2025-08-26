@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 
-const Team = ({ title, image, city, onDelete }) => {
+const Team = ({ title, image, _id, onDelete }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [hovered, setHovered] = useState(false);
 
@@ -15,7 +14,7 @@ const Team = ({ title, image, city, onDelete }) => {
   const handleConfirm = (e) => {
     e.stopPropagation();
     e.preventDefault();
-    onDelete(title, city);
+    onDelete(title, _id);
     setShowConfirm(false);
   };
 
