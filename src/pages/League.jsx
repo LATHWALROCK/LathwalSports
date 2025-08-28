@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { apiConnector } from "../services/apiConnector";
-import { leagueEndpoints, teamEndpoints } from "../services/apis";
+import { leagueEndpoints, teamEndpoints, tournamentEndpoints } from "../services/apis";
 import IndividualLeague from "../components/LeagueTile";
 import { useSearchParams } from "react-router-dom";
 import Select from "react-select";
 
-const { GET_TEAM } = teamEndpoints;
+const { GET_TEAM_BY_SPORT_AND_TOURNAMENT } = teamEndpoints;
 const { GET_LEAGUE, CREATE_LEAGUE, DELETE_LEAGUE } = leagueEndpoints;
+const {GET_TOURNAMENT_BY_TOURNAMENT_ID} = tournamentEndpoints;
 
 function League() {
   const [searchParams] = useSearchParams();
@@ -16,6 +17,7 @@ function League() {
 
   const [data, setData] = useState([]);
   const [teamData, setTeamData] = useState([]);
+  const [tournamentData, setTournamentData] = useState([]);
   const [showForm, setShowForm] = useState(false);
 
   // League form data
@@ -24,12 +26,23 @@ function League() {
   const [leagueLogo, setLeagueLogo] = useState(null);
   const [numTeams, setNumTeams] = useState(0);
   const [teams, setTeams] = useState([]);
+  const [jointWinner, setJointWinner] = useState(false); // ✅ New state
 
   // Fetch teams
   const fetchTeamData = async () => {
     try {
-      const response = await apiConnector("GET", GET_TEAM);
+      const response = await apiConnector("GET", GET_TEAM_BY_SPORT_AND_TOURNAMENT,null,null,{sport,tournament});
       setTeamData(response.data.data);
+    } catch (error) {
+      toast.error("Failed to fetch teams");
+      console.error("FETCH TEAMS ERROR:", error);
+    }
+  };
+
+  const fetchTournamentData = async () => {
+    try {
+      const response = await apiConnector("GET", GET_TOURNAMENT_BY_TOURNAMENT_ID,null,null,{_id: tournament});
+      setTournamentData(response.data.data);
     } catch (error) {
       toast.error("Failed to fetch teams");
       console.error("FETCH TEAMS ERROR:", error);
@@ -40,7 +53,6 @@ function League() {
   const fetchData = async () => {
     try {
       const response = await apiConnector("GET", GET_LEAGUE, null, null, { sport, tournament });
-      console.log(response.data.data);
       setData(response.data.data);
     } catch (error) {
       toast.error("Failed to fetch leagues");
@@ -72,10 +84,26 @@ function League() {
       formDataObj.append("tournament", tournament);
       formDataObj.append("image", leagueLogo);
 
-      teams.forEach((team, idx) => {
-        formDataObj.append(`teams[${idx}][team]`, team.teamId);
-        formDataObj.append(`teams[${idx}][position]`, idx + 1);
-      });
+      // ✅ Handle positions based on jointWinner
+      if (jointWinner && teams.length >= 2) {
+        // First two teams are joint winners
+        formDataObj.append(`teams[0][team]`, teams[0].teamId);
+        formDataObj.append(`teams[0][position]`, 1);
+        formDataObj.append(`teams[1][team]`, teams[1].teamId);
+        formDataObj.append(`teams[1][position]`, 1);
+
+        // Rest start from position 3
+        for (let i = 2; i < teams.length; i++) {
+          formDataObj.append(`teams[${i}][team]`, teams[i].teamId);
+          formDataObj.append(`teams[${i}][position]`, i + 1); // skipping 2
+        }
+      } else {
+        // Normal case (no joint winners)
+        teams.forEach((team, idx) => {
+          formDataObj.append(`teams[${idx}][team]`, team.teamId);
+          formDataObj.append(`teams[${idx}][position]`, idx + 1);
+        });
+      }
 
       const response = await apiConnector("POST", CREATE_LEAGUE, formDataObj, {
         "Content-Type": "multipart/form-data",
@@ -89,6 +117,7 @@ function League() {
       setLeagueLogo(null);
       setNumTeams(0);
       setTeams([]);
+      setJointWinner(false);
       fetchData();
     } catch (error) {
       console.error("CREATE LEAGUE ERROR:", error);
@@ -117,13 +146,14 @@ function League() {
   useEffect(() => {
     fetchData();
     fetchTeamData();
+    fetchTournamentData();
   }, []);
 
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4">
       <div className="max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
-          {tournament}
+          {tournamentData[0]?.name}
         </h1>
 
         {/* Grid of leagues */}
@@ -134,7 +164,7 @@ function League() {
                 title={league.name}
                 logo={league.leagueImageUrl}
                 teams={league.teams}
-                _id = {league._id}
+                _id={league._id}
                 onDelete={handleDelete}
               />
             </li>
@@ -188,6 +218,20 @@ function League() {
                       className="w-full border border-gray-300 rounded-lg p-2"
                       required
                     />
+
+                    {/* ✅ Joint Winner Checkbox */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="jointWinner"
+                        checked={jointWinner}
+                        onChange={(e) => setJointWinner(e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                      <label htmlFor="jointWinner" className="text-gray-700">
+                        Joint Winner (Top 2 teams share position 1)
+                      </label>
+                    </div>
                   </div>
 
                   {/* Right side (Image Upload + Preview) */}

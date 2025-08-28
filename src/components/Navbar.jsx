@@ -21,6 +21,12 @@ const Navbar = () => {
           Sports
         </Link>
         <Link
+          to="/tournament"
+          className="text-gray-700 hover:text-blue-600 transition"
+        >
+          Tournaments
+        </Link>
+        <Link
           to="/teams"
           className="text-gray-700 hover:text-blue-600 transition"
         >

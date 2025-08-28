@@ -87,7 +87,7 @@ exports.getLeague = async (req, res) => {
       .populate("teams.team")
       .populate("sport")
       .populate("tournament")
-      .sort({ year: -1 });
+      .sort({ year: 1 });
 
     res.status(200).json({
       success: true,

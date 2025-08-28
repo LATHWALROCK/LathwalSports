@@ -38,7 +38,7 @@ const Sport = ({ title,_id, onDelete }) => {
       </button>)}
 
       {/* Tile with Link */}
-      <Link to={`/tournament?sport=${_id}`}>
+      <Link to={`/tournament`}>
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}

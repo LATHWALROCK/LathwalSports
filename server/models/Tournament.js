@@ -22,11 +22,6 @@ const tournamentSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    priority: {
-      type: Number,
-      required: true,
-      min: 1,
-  },
   },
   { timestamps: true }
 );

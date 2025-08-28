@@ -49,7 +49,30 @@ exports.getTeam = async (req, res) => {
         const teams = await Team.find({})
             .populate("sport")
             .populate("tournament")
-            .sort({ name: 1 }); // 🔹 1 = ascending, -1 = descending
+            .sort({ name: 1 });
+
+        res.status(200).json({
+            success: true,
+            data: teams,
+            message: 'All teams data fetched in alphabetical order'
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            message: 'Server error'
+        });
+    }
+};
+
+exports.getTeamBySportAndTournament = async (req, res) => {
+    try {
+        const { sport, tournament } = req.query;
+        const teams = await Team.find({sport, tournament})
+            .populate("sport")
+            .populate("tournament")
+            .sort({ name: 1 });
 
         res.status(200).json({
             success: true,

@@ -10,7 +10,7 @@ import {
 
 const { GET_TEAM, CREATE_TEAM, DELETE_TEAM } = teamEndpoints;
 const { GET_SPORT } = sportEndpoints;
-const { GET_TOURNAMENT } = tournamentEndpoints;
+const { GET_TOURNAMENT_BY_SPORT } = tournamentEndpoints;
 
 function Team() {
   const [data, setData] = useState([]);
@@ -58,7 +58,7 @@ function Team() {
       setTournamentData([]);
       return;
     }
-    apiConnector("GET", GET_TOURNAMENT, null, null, { sport: selectedSport })
+    apiConnector("GET", GET_TOURNAMENT_BY_SPORT, null, null, { sport: selectedSport })
       .then((response) => {
         setTournamentData(response.data.data);
       })
@@ -205,14 +205,14 @@ function Team() {
             return (
               <div key={sportId} className="mb-10">
                 {/* Sport Header */}
-                <h2 className="text-2xl font-semibold text-blue-700 mb-4">
+                <h2 className="text-2xl font-semibold mb-4">
                   {sportGroup.sportName}
                 </h2>
 
                 {/* Tournaments within the sport */}
                 {tournamentGroups.map(([tournamentId, tGroup]) => (
                   <div key={tournamentId} className="mb-6 ml-4">
-                    <h3 className="text-xl font-medium text-green-700 mb-3">
+                    <h3 className="text-xl font-medium mb-3">
                       {tGroup.tournamentName}
                     </h3>
                     <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">

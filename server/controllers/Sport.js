@@ -36,7 +36,8 @@ exports.createSport = async (req, res) => {
 
 exports.getSport = async (req, res) => {
     try {
-        const sports = await Sport.find({});
+        const sports = await Sport.find({})
+            .sort({ name: 1 });;
         res.status(200).json(
             {
                 success: true,
@@ -60,7 +61,7 @@ exports.getSport = async (req, res) => {
 
 exports.deleteSport = async (req, res) => {
     try {
-        const { name,_id } = req.body;
+        const { name, _id } = req.body;
         if (!_id) {
             return res.status(400).json({
                 success: false,

@@ -2,30 +2,40 @@ import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { apiConnector } from "../services/apiConnector";
 import IndividualTournament from "../components/TournamentTile";
-import { tournamentEndpoints } from "../services/apis";
-import { useSearchParams } from "react-router-dom";
+import { tournamentEndpoints, sportEndpoints } from "../services/apis";
 
 const { GET_TOURNAMENT, CREATE_TOURNAMENT, DELETE_TOURNAMENT } =
   tournamentEndpoints;
+const { GET_SPORT } = sportEndpoints;
 
 function Tournament() {
-  const [searchParams] = useSearchParams();
-  const sport = searchParams.get("sport");
   const [data, setData] = useState([]);
-  const [formData, setFormData] = useState({ name: "", type: "", priority: 1 });
+  const [sportData, setSportData] = useState([]);
+  const [formData, setFormData] = useState({ name: "", type: "", sport: "" });
   const [image, setImage] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
-  const { name, type, priority } = formData;
+  const { name, type, sport } = formData;
 
   const fetchData = () => {
-    apiConnector("GET", GET_TOURNAMENT, null, null, { sport })
+    apiConnector("GET", GET_TOURNAMENT)
       .then((response) => {
         setData(response.data.data);
       })
       .catch((error) => {
         toast.error("Failed to fetch tournaments");
         console.error("FETCH TOURNAMENTS ERROR:", error);
+      });
+  };
+
+  const fetchSportData = () => {
+    apiConnector("GET", GET_SPORT)
+      .then((response) => {
+        setSportData(response.data.data);
+      })
+      .catch((error) => {
+        toast.error("Failed to fetch sports");
+        console.error("FETCH SPORTS ERROR:", error);
       });
   };
 
@@ -45,7 +55,6 @@ function Tournament() {
     formDataObj.append("sport", sport);
     formDataObj.append("image", image);
     formDataObj.append("type", type);
-    formDataObj.append("priority", priority);
 
     apiConnector("POST", CREATE_TOURNAMENT, formDataObj, {
       "Content-Type": "multipart/form-data",
@@ -56,7 +65,7 @@ function Tournament() {
         }
 
         toast.success("Tournament created successfully");
-        setFormData({ name: "", type: "", priority: 1 });
+        setFormData({ name: "", type: "", sport: "" });
         setImage(null);
         setShowForm(false);
         fetchData();
@@ -92,13 +101,19 @@ function Tournament() {
 
   useEffect(() => {
     fetchData();
+    fetchSportData();
   }, []);
 
-  // 🔹 Group tournaments by type
-  const groupedData = data.reduce((groups, tournament) => {
-    if (!groups[tournament.type]) groups[tournament.type] = [];
-    groups[tournament.type].push(tournament);
-    return groups;
+  // 🔹 Group tournaments first by sport, then by type
+  const groupedData = data.reduce((sports, tournament) => {
+    const sportName = tournament.sport?.name || "Unknown Sport";
+    if (!sports[sportName]) sports[sportName] = {};
+
+    const typeName = tournament.type || "Other";
+    if (!sports[sportName][typeName]) sports[sportName][typeName] = [];
+
+    sports[sportName][typeName].push(tournament);
+    return sports;
   }, {});
 
   return (
@@ -109,22 +124,30 @@ function Tournament() {
         </h1>
 
         {/* Render grouped tournaments */}
-        {Object.keys(groupedData).map((type) => (
-          <div key={type} className="mb-10">
-            <h2 className="text-2xl font-semibold text-gray-700 mb-4">{type}</h2>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {groupedData[type].map((tournament) => (
-                <li key={tournament._id}>
-                  <IndividualTournament
-                    title={tournament.name}
-                    image={tournament.imageUrl}
-                    sport={sport}
-                    _id={tournament._id}
-                    onDelete={handleDelete}
-                  />
-                </li>
-              ))}
-            </ul>
+        {Object.keys(groupedData).map((sportName) => (
+          <div key={sportName} className="mb-12">
+            <h2 className="text-3xl font-semibold text-gray-700 mb-6">{sportName}</h2>
+
+            {Object.keys(groupedData[sportName]).map((type) => (
+              <div key={type} className="mb-8">
+                <h3 className="text-2xl font-semibold text-gray-700 mb-4">
+                  {type}
+                </h3>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  {groupedData[sportName][type].map((tournament) => (
+                    <li key={tournament._id}>
+                      <IndividualTournament
+                        title={tournament.name}
+                        image={tournament.imageUrl}
+                        sport={tournament.sport._id}
+                        _id={tournament._id}
+                        onDelete={handleDelete}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         ))}
 
@@ -154,6 +177,7 @@ function Tournament() {
                   focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
+
                 <input
                   type="text"
                   name="type"
@@ -165,18 +189,22 @@ function Tournament() {
                   required
                 />
 
-                {/* 🔹 Priority Number Input */}
-                <input
-                  type="number"
-                  name="priority"
-                  value={priority}
+                {/* 🔹 Sport Dropdown */}
+                <select
+                  name="sport"
+                  value={sport}
                   onChange={handleOnChange}
-                  min="1"
-                  placeholder="Enter priority (min 1)"
                   className="w-full border border-gray-300 rounded-lg p-2 
                   focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
-                />
+                >
+                  <option value="">Select Sport</option>
+                  {sportData.map((sp) => (
+                    <option key={sp._id} value={sp._id}>
+                      {sp.name}
+                    </option>
+                  ))}
+                </select>
 
                 {/* 🔹 Styled Tournament Logo Input */}
                 <div className="w-full flex flex-col items-center">
