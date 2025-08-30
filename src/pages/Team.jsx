@@ -26,7 +26,7 @@ function Team() {
   const [preview, setPreview] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
-  // 👇 state for collapsible sections
+  // 👇 collapsed state (default collapsed)
   const [collapsedSports, setCollapsedSports] = useState({});
   const [collapsedTournaments, setCollapsedTournaments] = useState({});
 
@@ -37,6 +37,20 @@ function Team() {
     apiConnector("GET", GET_TEAM)
       .then((response) => {
         setData(response.data.data);
+
+        // 🔹 Collapse all sports & tournaments by default
+        const sportsCollapsed = {};
+        const tournamentsCollapsed = {};
+        response.data.data.forEach((team) => {
+          if (team.sport?._id) {
+            sportsCollapsed[team.sport._id] = true;
+          }
+          if (team.sport?._id && team.tournament?._id) {
+            tournamentsCollapsed[`${team.sport._id}-${team.tournament._id}`] = true;
+          }
+        });
+        setCollapsedSports(sportsCollapsed);
+        setCollapsedTournaments(tournamentsCollapsed);
       })
       .catch((error) => {
         toast.error("Failed to fetch team");

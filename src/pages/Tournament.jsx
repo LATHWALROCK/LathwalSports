@@ -155,7 +155,7 @@ function Tournament() {
                 {sportName}
               </h2>
               <span className="text-xl">
-                {sportToggle[sportName] ? "▼" : "▲"}
+                {sportToggle[sportName] ? "▲" : "▼"}
               </span>
             </div>
 
@@ -172,7 +172,7 @@ function Tournament() {
                         {type}
                       </h3>
                       <span className="text-lg">
-                        {typeToggle[`${sportName}-${type}`] ? "▼" : "▲"}
+                        {typeToggle[`${sportName}-${type}`] ? "▲" : "▼"}
                       </span>
                     </div>
 
