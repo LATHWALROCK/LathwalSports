@@ -17,6 +17,10 @@ function Tournament() {
 
   const { name, type, sport } = formData;
 
+  // 🔹 Toggle states for expand/collapse
+  const [sportToggle, setSportToggle] = useState({});
+  const [typeToggle, setTypeToggle] = useState({});
+
   const fetchData = () => {
     apiConnector("GET", GET_TOURNAMENT)
       .then((response) => {
@@ -116,6 +120,22 @@ function Tournament() {
     return sports;
   }, {});
 
+  // 🔹 Toggle sport expand/collapse
+  const toggleSport = (sportName) => {
+    setSportToggle((prev) => ({
+      ...prev,
+      [sportName]: !prev[sportName],
+    }));
+  };
+
+  // 🔹 Toggle type expand/collapse
+  const toggleType = (sportName, typeName) => {
+    setTypeToggle((prev) => ({
+      ...prev,
+      [`${sportName}-${typeName}`]: !prev[`${sportName}-${typeName}`],
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4">
       <div className="max-w-5xl mx-auto">
@@ -125,29 +145,57 @@ function Tournament() {
 
         {/* Render grouped tournaments */}
         {Object.keys(groupedData).map((sportName) => (
-          <div key={sportName} className="mb-12">
-            <h2 className="text-3xl font-semibold text-gray-700 mb-6">{sportName}</h2>
+          <div key={sportName} className="mb-4">
+            {/* Sport Toggle */}
+            <div
+              onClick={() => toggleSport(sportName)}
+              className="flex justify-between items-center cursor-pointer bg-white p-4 rounded-lg shadow"
+            >
+              <h2 className="text-2xl font-semibold text-gray-700">
+                {sportName}
+              </h2>
+              <span className="text-xl">
+                {sportToggle[sportName] ? "▼" : "▲"}
+              </span>
+            </div>
 
-            {Object.keys(groupedData[sportName]).map((type) => (
-              <div key={type} className="mb-8">
-                <h3 className="text-2xl font-semibold text-gray-700 mb-4">
-                  {type}
-                </h3>
-                <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                  {groupedData[sportName][type].map((tournament) => (
-                    <li key={tournament._id}>
-                      <IndividualTournament
-                        title={tournament.name}
-                        image={tournament.imageUrl}
-                        sport={tournament.sport._id}
-                        _id={tournament._id}
-                        onDelete={handleDelete}
-                      />
-                    </li>
-                  ))}
-                </ul>
+            {sportToggle[sportName] && (
+              <div className="mt-4 ml-6">
+                {Object.keys(groupedData[sportName]).map((type) => (
+                  <div key={type} className="mb-6">
+                    {/* Type Toggle */}
+                    <div
+                      onClick={() => toggleType(sportName, type)}
+                      className="flex justify-between items-center cursor-pointer bg-gray-200 p-3 rounded-lg"
+                    >
+                      <h3 className="text-xl font-semibold text-gray-700">
+                        {type}
+                      </h3>
+                      <span className="text-lg">
+                        {typeToggle[`${sportName}-${type}`] ? "▼" : "▲"}
+                      </span>
+                    </div>
+
+                    {/* Tournament List */}
+                    {typeToggle[`${sportName}-${type}`] && (
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mt-4">
+                        {groupedData[sportName][type].map((tournament) => (
+                          <li key={tournament._id}>
+                            <IndividualTournament
+                              title={tournament.name}
+                              image={tournament.imageUrl}
+                              sport={tournament.sport._id}
+                              _id={tournament._id}
+                              onDelete={handleDelete}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         ))}
 

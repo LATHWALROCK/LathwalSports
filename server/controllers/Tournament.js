@@ -45,7 +45,10 @@ exports.createTournament = async (req, res) => {
 
 exports.getTournament = async (req, res) => {
     try {
-        const tournaments = await Tournament.find({}).populate("sport");
+        const tournaments = await Tournament.find({}).populate("sport")
+        .sort({sport:1})
+        .sort({type:1})
+        .sort({name:1});
         res.status(200).json(
             {
                 success: true,

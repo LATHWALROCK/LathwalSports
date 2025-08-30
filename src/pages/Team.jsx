@@ -26,6 +26,10 @@ function Team() {
   const [preview, setPreview] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
+  // 👇 state for collapsible sections
+  const [collapsedSports, setCollapsedSports] = useState({});
+  const [collapsedTournaments, setCollapsedTournaments] = useState({});
+
   const { name, city, sport, tournament } = formData;
 
   // Fetch all teams
@@ -58,7 +62,13 @@ function Team() {
       setTournamentData([]);
       return;
     }
-    apiConnector("GET", GET_TOURNAMENT_BY_SPORT, null, null, { sport: selectedSport })
+    apiConnector(
+      "GET",
+      GET_TOURNAMENT_BY_SPORT,
+      null,
+      null,
+      { sport: selectedSport }
+    )
       .then((response) => {
         setTournamentData(response.data.data);
       })
@@ -78,7 +88,6 @@ function Team() {
     }));
 
     if (name === "sport") {
-      // Reset tournament when sport changes and fetch new list
       setFormData((prev) => ({ ...prev, tournament: "" }));
       fetchTournamentData(value);
     }
@@ -101,8 +110,8 @@ function Team() {
     const formDataObj = new FormData();
     formDataObj.append("name", name);
     formDataObj.append("city", city);
-    formDataObj.append("sport", sport);         // ID from dropdown
-    formDataObj.append("tournament", tournament); // ID from dropdown
+    formDataObj.append("sport", sport);
+    formDataObj.append("tournament", tournament);
     formDataObj.append("image", image);
 
     apiConnector("POST", CREATE_TEAM, formDataObj, {
@@ -154,7 +163,7 @@ function Team() {
     fetchSportData();
   }, []);
 
-  // ---- Group teams by Sport (populated object) -> Tournament (populated object) ----
+  // ---- Group teams by Sport -> Tournament ----
   const grouped = data.reduce((acc, team) => {
     const sportObj = team?.sport || {};
     const sportId = sportObj?._id || "unknown-sport";
@@ -179,10 +188,24 @@ function Team() {
     return acc;
   }, {});
 
-  // Sorted arrays for nicer display
   const sportsGroups = Object.entries(grouped).sort(([, a], [, b]) =>
     a.sportName.localeCompare(b.sportName)
   );
+
+  // ---- Collapsible toggles ----
+  const toggleSport = (sportId) => {
+    setCollapsedSports((prev) => ({
+      ...prev,
+      [sportId]: !prev[sportId],
+    }));
+  };
+
+  const toggleTournament = (sportId, tournamentId) => {
+    setCollapsedTournaments((prev) => ({
+      ...prev,
+      [`${sportId}-${tournamentId}`]: !prev[`${sportId}-${tournamentId}`],
+    }));
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4">
@@ -191,7 +214,7 @@ function Team() {
           Teams
         </h1>
 
-        {/* Grouped Teams by Sport -> Tournament */}
+        {/* Grouped Teams */}
         {sportsGroups.length === 0 ? (
           <p className="text-center text-gray-600">No teams available</p>
         ) : (
@@ -202,33 +225,53 @@ function Team() {
               a.tournamentName.localeCompare(b.tournamentName)
             );
 
+            const sportCollapsed = collapsedSports[sportId];
+
             return (
-              <div key={sportId} className="mb-10">
+              <div key={sportId} className="mb-10 pb-4">
                 {/* Sport Header */}
-                <h2 className="text-2xl font-semibold mb-4">
+                <h2
+                  onClick={() => toggleSport(sportId)}
+                  className="text-2xl font-semibold mb-2 cursor-pointer flex justify-between items-center bg-gray-200 px-4 p-4 rounded-lg shadow"
+                >
                   {sportGroup.sportName}
+                  <span>{sportCollapsed ? "▼" : "▲"}</span>
                 </h2>
 
-                {/* Tournaments within the sport */}
-                {tournamentGroups.map(([tournamentId, tGroup]) => (
-                  <div key={tournamentId} className="mb-6 ml-4">
-                    <h3 className="text-xl font-medium mb-3">
-                      {tGroup.tournamentName}
-                    </h3>
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                      {tGroup.teams.map((team) => (
-                        <li key={team._id}>
-                          <IndividualTeam
-                            title={team.name}
-                            image={team.imageUrl}
-                            _id={team._id}
-                            onDelete={handleDelete}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
+                {!sportCollapsed &&
+                  tournamentGroups.map(([tournamentId, tGroup]) => {
+                    const tourCollapsed =
+                      collapsedTournaments[`${sportId}-${tournamentId}`];
+
+                    return (
+                      <div key={tournamentId} className="mb-4 ml-6">
+                        <h3
+                          onClick={() =>
+                            toggleTournament(sportId, tournamentId)
+                          }
+                          className="text-xl font-medium mb-2 cursor-pointer flex justify-between items-center bg-gray-100 px-3 py-2 rounded"
+                        >
+                          {tGroup.tournamentName}
+                          <span>{tourCollapsed ? "▼" : "▲"}</span>
+                        </h3>
+
+                        {!tourCollapsed && (
+                          <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                            {tGroup.teams.map((team) => (
+                              <li key={team._id}>
+                                <IndividualTeam
+                                  title={team.name}
+                                  image={team.imageUrl}
+                                  _id={team._id}
+                                  onDelete={handleDelete}
+                                />
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             );
           })
@@ -244,11 +287,10 @@ function Team() {
           + Add Team
         </button>
 
-        {/* Popup Modal */}
+        {/* Add Team Modal */}
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl shadow-lg w-[90%] max-w-lg p-8 relative">
-              {/* Close Button */}
               <button
                 onClick={() => {
                   setShowForm(false);
@@ -275,7 +317,6 @@ function Team() {
                 onSubmit={handleOnSubmit}
                 className="flex flex-col gap-6 items-center"
               >
-                {/* Team Name */}
                 <input
                   type="text"
                   name="name"
@@ -286,8 +327,6 @@ function Team() {
                   focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
-
-                {/* City */}
                 <input
                   type="text"
                   name="city"
@@ -298,8 +337,6 @@ function Team() {
                   focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
-
-                {/* Sport Dropdown */}
                 <select
                   name="sport"
                   value={sport}
@@ -315,8 +352,6 @@ function Team() {
                     </option>
                   ))}
                 </select>
-
-                {/* Tournament Dropdown */}
                 <select
                   name="tournament"
                   value={tournament}
@@ -333,8 +368,6 @@ function Team() {
                     </option>
                   ))}
                 </select>
-
-                {/* Image Upload */}
                 <label
                   htmlFor="imageUpload"
                   className="w-40 h-40 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center 
@@ -359,8 +392,6 @@ function Team() {
                   className="hidden"
                   required={!preview}
                 />
-
-                {/* Buttons */}
                 <div className="flex gap-3 mt-4">
                   <button
                     type="submit"
