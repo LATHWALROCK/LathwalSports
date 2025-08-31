@@ -48,19 +48,19 @@ const LeagueTile = ({ title, logo, teams, _id, onDelete }) => {
         onMouseLeave={() => setHovered(false)}
       >
         {/* Title at Top */}
-        <h2 className="text-2xl font-bold text-gray-800 text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 text-center mb-3">
           {title}
         </h2>
 
         {/* First Row: League Logo + Winners */}
-        <div className="flex flex-col items-center mb-10">
+        <div className="flex flex-col items-center mb-4">
           <div className="flex items-center gap-16 flex-wrap justify-center">
             {/* League Logo */}
             <div className="flex flex-col items-center">
               <img
                 src={logo}
                 alt="League Logo"
-                className="w-32 h-32 object-contain rounded-xl mb-2"
+                className="w-32 h-32 object-contain rounded-xl"
               />
             </div>
 
@@ -76,11 +76,8 @@ const LeagueTile = ({ title, logo, teams, _id, onDelete }) => {
                       <img
                         src={winner.team.imageUrl}
                         alt={winner.team.name}
-                        className="w-32 h-32 object-contain rounded-xl mb-1"
+                        className="w-32 h-32 object-contain rounded-xl"
                       />
-                      <p className="text-sm font-medium text-gray-700">
-                        {winner.team.name}
-                      </p>
                     </div>
                   ))}
                 </div>
