@@ -58,7 +58,7 @@ const LeagueTile = ({ title, logo, teams, _id, onDelete, onEdit, leagueData }) =
       )}
 
       <div
-        className="bg-gray-100 ring-1 ring-black rounded-2xl p-6 mb-6 text-black"
+        className="bg-gray-100 shadow-md rounded-2xl p-6 mb-6 text-black"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >

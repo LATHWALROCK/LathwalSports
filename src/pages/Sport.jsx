@@ -134,7 +134,7 @@ function Sport() {
 
           <button
             onClick={() => setShowForm(true)}
-            className="w-full bg-gray-100 ring-1 ring-black rounded-2xl p-6 flex items-center justify-center
+            className="w-full bg-gray-100 shadow-md rounded-2xl p-6 flex items-center justify-center
                        text-2xl font-bold text-black hover:bg-gray-200 hover:scale-[1.02]
                        transition-all duration-300 cursor-pointer"
           >

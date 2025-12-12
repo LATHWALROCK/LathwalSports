@@ -58,7 +58,7 @@ const Tournament = ({ title, image, sport, _id, onDelete, onEdit }) => {
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          className="bg-gray-100 ring-1 ring-black rounded-2xl p-6 flex flex-col items-center 
+          className="bg-gray-100 shadow-md rounded-2xl p-6 flex flex-col items-center 
                  justify-between text-lg font-semibold text-black hover:bg-gray-200 
                  hover:scale-105 transition-all duration-300 cursor-pointer h-64 w-full"
         >
