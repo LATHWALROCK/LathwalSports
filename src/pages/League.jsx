@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "react-hot-toast";
 import { apiConnector } from "../services/apiConnector";
-import { leagueEndpoints, teamEndpoints, tournamentEndpoints } from "../services/apis";
+import { leagueEndpoints, teamEndpoints, tournamentEndpoints, sportEndpoints } from "../services/apis";
 import IndividualLeague from "../components/LeagueTile";
 import { useSearchParams } from "react-router-dom";
 import Select from "react-select";
 
-const { GET_TEAM_BY_SPORT_AND_TOURNAMENT } = teamEndpoints;
-const { GET_LEAGUE, CREATE_LEAGUE, DELETE_LEAGUE } = leagueEndpoints;
-const {GET_TOURNAMENT_BY_TOURNAMENT_ID} = tournamentEndpoints;
+const { GET_TEAM_BY_SPORT, GET_TEAM_BY_SPORT_AND_TOURNAMENT } = teamEndpoints;
+const { GET_LEAGUE, CREATE_LEAGUE, UPDATE_LEAGUE, DELETE_LEAGUE } = leagueEndpoints;
+const { GET_TOURNAMENT_BY_TOURNAMENT_ID } = tournamentEndpoints;
+const { GET_SPORT } = sportEndpoints;
 
 function League() {
   const [searchParams] = useSearchParams();
@@ -18,7 +19,10 @@ function League() {
   const [data, setData] = useState([]);
   const [teamData, setTeamData] = useState([]);
   const [tournamentData, setTournamentData] = useState([]);
+  const [sportData, setSportData] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // League form data
   const [leagueName, setLeagueName] = useState("");
@@ -28,37 +32,67 @@ function League() {
   const [teams, setTeams] = useState([]);
   const [jointWinner, setJointWinner] = useState(false); // ✅ New state
 
+  // Edit form data
+  const [editLeagueName, setEditLeagueName] = useState("");
+  const [editLeagueYear, setEditLeagueYear] = useState(new Date().getFullYear());
+  const [editLeagueLogo, setEditLeagueLogo] = useState(null);
+  const [editPreview, setEditPreview] = useState(null);
+  const [editNumTeams, setEditNumTeams] = useState(0);
+  const [editTeams, setEditTeams] = useState([]);
+  const [editJointWinner, setEditJointWinner] = useState(false);
+  const [editLeagueId, setEditLeagueId] = useState("");
+
   // Fetch teams
-  const fetchTeamData = async () => {
+  const fetchTeamData = useCallback(async () => {
     try {
-      const response = await apiConnector("GET", GET_TEAM_BY_SPORT_AND_TOURNAMENT,null,null,{sport,tournament});
+      // For international tournaments, get national teams by sport
+      // For league tournaments, get league teams by sport and tournament
+      const endpoint = tournamentData[0]?.type === "International"
+        ? GET_TEAM_BY_SPORT
+        : GET_TEAM_BY_SPORT_AND_TOURNAMENT;
+
+      const queryParams = tournamentData[0]?.type === "International"
+        ? { sport }
+        : { sport, tournament };
+
+      const response = await apiConnector("GET", endpoint, null, null, queryParams);
       setTeamData(response.data.data);
     } catch (error) {
       toast.error("Failed to fetch teams");
       console.error("FETCH TEAMS ERROR:", error);
     }
-  };
+  }, [sport, tournament, tournamentData]);
 
-  const fetchTournamentData = async () => {
+  const fetchSportData = useCallback(() => {
+    apiConnector("GET", GET_SPORT)
+      .then((response) => {
+        setSportData(response.data.data);
+      })
+      .catch((error) => {
+        console.error("FETCH SPORTS ERROR:", error);
+      });
+  }, []);
+
+  const fetchTournamentData = useCallback(async () => {
     try {
       const response = await apiConnector("GET", GET_TOURNAMENT_BY_TOURNAMENT_ID,null,null,{_id: tournament});
       setTournamentData(response.data.data);
     } catch (error) {
-      toast.error("Failed to fetch teams");
-      console.error("FETCH TEAMS ERROR:", error);
+      toast.error("Failed to fetch tournament");
+      console.error("FETCH TOURNAMENT ERROR:", error);
     }
-  };
+  }, [tournament]);
 
   // Fetch leagues
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const response = await apiConnector("GET", GET_LEAGUE, null, null, { sport, tournament });
       setData(response.data.data);
     } catch (error) {
-      toast.error("Failed to fetch leagues");
+      toast.error("Failed to fetch editions");
       console.error("FETCH LEAGUE ERROR:", error);
     }
-  };
+  }, [sport, tournament]);
 
   const handleNumTeamsChange = (e) => {
     const n = parseInt(e.target.value, 10);
@@ -74,7 +108,8 @@ function League() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const toastId = toast.loading("Creating league...");
+    const editionType = getEditionType();
+    const toastId = toast.loading(`Creating ${editionType.toLowerCase()}...`);
 
     try {
       const formDataObj = new FormData();
@@ -111,7 +146,7 @@ function League() {
 
       if (!response.data.success) throw new Error(response.data.message);
 
-      toast.success("League created successfully");
+      toast.success(`${editionType} created successfully`);
       setShowForm(false);
       setLeagueName("");
       setLeagueLogo(null);
@@ -121,42 +156,177 @@ function League() {
       fetchData();
     } catch (error) {
       console.error("CREATE LEAGUE ERROR:", error);
-      toast.error("League creation failed");
+      toast.error(`${editionType} creation failed`);
     } finally {
       toast.dismiss(toastId);
     }
   };
 
   const handleDelete = async (name, _id) => {
-    const toastId = toast.loading("Deleting league...");
+    const editionType = getEditionType();
+    const toastId = toast.loading(`Deleting ${editionType.toLowerCase()}...`);
     try {
       const response = await apiConnector("DELETE", DELETE_LEAGUE, { name, _id });
       if (!response.data.success) throw new Error(response.data.message);
 
-      toast.success("League deleted successfully");
+      toast.success(`${editionType} deleted successfully`);
       fetchData();
     } catch (error) {
       console.error("DELETE League ERROR:", error);
-      toast.error("League deletion failed");
+      toast.error(`${editionType} deletion failed`);
     } finally {
       toast.dismiss(toastId);
     }
   };
 
+  // Edit handlers
+  const handleEdit = (_id, leagueData) => {
+    setEditLeagueId(_id);
+    setEditLeagueName(leagueData.name || "");
+    setEditLeagueYear(leagueData.year || new Date().getFullYear());
+    setEditPreview(leagueData.leagueImageUrl || null);
+    setEditNumTeams(leagueData.teams?.length || 0);
+    setEditJointWinner(leagueData.teams?.filter(t => t.position === 1).length > 1 || false);
+    
+    // Populate teams array with existing data
+    const sortedTeams = [...(leagueData.teams || [])].sort((a, b) => a.position - b.position);
+    setEditTeams(sortedTeams.map(t => ({
+      teamId: t.team?._id || "",
+      position: t.position || ""
+    })));
+    
+    setShowEditForm(true);
+  };
+
+  const handleEditNumTeamsChange = (e) => {
+    const n = parseInt(e.target.value, 10);
+    setEditNumTeams(n);
+    // If we have existing teams, preserve them; otherwise create new array
+    if (editTeams.length === 0) {
+      setEditTeams(Array.from({ length: n }, () => ({ teamId: "", position: "" })));
+    } else {
+      // Adjust array length while preserving existing data
+      const newTeams = [...editTeams];
+      if (n > editTeams.length) {
+        // Add empty entries
+        for (let i = editTeams.length; i < n; i++) {
+          newTeams.push({ teamId: "", position: "" });
+        }
+      } else if (n < editTeams.length) {
+        // Remove extra entries
+        newTeams.splice(n);
+      }
+      setEditTeams(newTeams);
+    }
+  };
+
+  const handleEditTeamChange = (index, value) => {
+    const updatedTeams = [...editTeams];
+    updatedTeams[index].teamId = value;
+    setEditTeams(updatedTeams);
+  };
+
+  const handleEditImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setEditLeagueLogo(file);
+      setEditPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    const editionType = getEditionType();
+    const toastId = toast.loading(`Updating ${editionType.toLowerCase()}...`);
+
+    try {
+      const formDataObj = new FormData();
+      formDataObj.append("_id", editLeagueId);
+      formDataObj.append("name", editLeagueName);
+      formDataObj.append("year", editLeagueYear);
+      formDataObj.append("sport", sport);
+      formDataObj.append("tournament", tournament);
+      if (editLeagueLogo) {
+        formDataObj.append("image", editLeagueLogo);
+      }
+
+      // Handle positions based on jointWinner
+      if (editJointWinner && editTeams.length >= 2) {
+        formDataObj.append(`teams[0][team]`, editTeams[0].teamId);
+        formDataObj.append(`teams[0][position]`, 1);
+        formDataObj.append(`teams[1][team]`, editTeams[1].teamId);
+        formDataObj.append(`teams[1][position]`, 1);
+
+        for (let i = 2; i < editTeams.length; i++) {
+          formDataObj.append(`teams[${i}][team]`, editTeams[i].teamId);
+          formDataObj.append(`teams[${i}][position]`, i + 1);
+        }
+      } else {
+        editTeams.forEach((team, idx) => {
+          formDataObj.append(`teams[${idx}][team]`, team.teamId);
+          formDataObj.append(`teams[${idx}][position]`, idx + 1);
+        });
+      }
+
+      const response = await apiConnector("PUT", UPDATE_LEAGUE, formDataObj, {
+        "Content-Type": "multipart/form-data",
+      });
+
+      if (!response.data.success) throw new Error(response.data.message);
+
+      toast.success(`${editionType} updated successfully`);
+      setShowEditForm(false);
+      setEditLeagueId("");
+      setEditLeagueName("");
+      setEditLeagueYear(new Date().getFullYear());
+      setEditLeagueLogo(null);
+      setEditPreview(null);
+      setEditNumTeams(0);
+      setEditTeams([]);
+      setEditJointWinner(false);
+      fetchData();
+    } catch (error) {
+      console.error("UPDATE LEAGUE ERROR:", error);
+      toast.error(`${editionType} update failed`);
+    } finally {
+      toast.dismiss(toastId);
+    }
+  };
+
+  const getEditionType = () => {
+    return tournamentData[0]?.type === "International" ? "Tournament Edition" : "League Edition";
+  };
+
+
+
   useEffect(() => {
-    fetchData();
-    fetchTeamData();
-    fetchTournamentData();
-  }, []);
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchData(),
+        fetchTournamentData(),
+        fetchSportData()
+      ]);
+      setLoading(false);
+    };
+    loadData();
+  }, [fetchData, fetchTournamentData, fetchSportData]);
+
+  // Separate useEffect for fetching teams when tournament data is available
+  useEffect(() => {
+    if (tournamentData.length > 0) {
+      fetchTeamData();
+    }
+  }, [tournamentData, fetchTeamData]);
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10 px-4">
+    <div className="bg-gradient-to-b from-white to-gray-50 text-black py-10 px-4">
       <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
+        <h1 className="text-3xl font-bold text-center mb-8">
           {tournamentData[0]?.name}
         </h1>
 
-        {/* Grid of leagues */}
+        {/* Grid of editions */}
         <ul className="grid grid-cols-1 gap-6 mb-6">
           {data.map((league) => (
             <li key={league._id}>
@@ -166,27 +336,44 @@ function League() {
                 teams={league.teams}
                 _id={league._id}
                 onDelete={handleDelete}
+                onEdit={handleEdit}
+                leagueData={league}
               />
             </li>
           ))}
         </ul>
 
-        {/* Add League button */}
+        {/* Add Edition button */}
         <button
           onClick={() => setShowForm(true)}
-          className="w-full bg-white shadow-md rounded-2xl p-6 flex items-center justify-center 
-             text-2xl font-bold text-gray-700 hover:shadow-xl hover:scale-[1.02] 
-             transition-all duration-300 cursor-pointer"
+          disabled={loading}
+          className="w-full bg-gray-100 ring-1 ring-black rounded-2xl p-6 flex items-center justify-center
+             text-2xl font-bold text-black hover:bg-gray-200 hover:scale-[1.02]
+             transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          + Add League
+          + Add {getEditionType()}
         </button>
 
         {/* Modal Form */}
-        {showForm && (
+        {showForm && !loading && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              <h2 className="text-2xl font-bold mb-4">Create New League</h2>
+            <div className="bg-white text-black rounded-2xl shadow-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto ring-1 ring-black">
+              <h2 className="text-2xl font-bold mb-4">
+                Create New {getEditionType()}
+              </h2>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Display Sport and Tournament */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="w-full border border-black bg-gray-50 text-black rounded-lg p-3">
+                    <label className="text-sm text-gray-600">Sport:</label>
+                    <p className="font-semibold">{Array.isArray(sportData) ? sportData.find(s => s._id === sport)?.name || "" : ""}</p>
+                  </div>
+                  <div className="w-full border border-black bg-gray-50 text-black rounded-lg p-3">
+                    <label className="text-sm text-gray-600">Tournament:</label>
+                    <p className="font-semibold">{tournamentData?.[0]?.name || ""}</p>
+                  </div>
+                </div>
+
                 {/* Two column layout */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Left side */}
@@ -195,9 +382,9 @@ function League() {
                       type="text"
                       value={leagueName}
                       onChange={(e) => setLeagueName(e.target.value)}
-                      placeholder="League Name"
+                      placeholder={`${getEditionType()} Name`}
                       required
-                      className="w-full border border-gray-300 rounded-lg p-2"
+                      className="w-full border border-black bg-white text-black placeholder:text-gray-500 rounded-lg p-2"
                     />
 
                     <input
@@ -206,7 +393,7 @@ function League() {
                       onChange={(e) => setLeagueYear(e.target.value)}
                       placeholder="Year"
                       required
-                      className="w-full border border-gray-300 rounded-lg p-2"
+                      className="w-full border border-black bg-white text-black placeholder:text-gray-500 rounded-lg p-2"
                     />
 
                     <input
@@ -215,7 +402,7 @@ function League() {
                       value={numTeams}
                       onChange={handleNumTeamsChange}
                       placeholder="Number of Teams"
-                      className="w-full border border-gray-300 rounded-lg p-2"
+                      className="w-full border border-black bg-white text-black placeholder:text-gray-500 rounded-lg p-2"
                       required
                     />
 
@@ -228,7 +415,7 @@ function League() {
                         onChange={(e) => setJointWinner(e.target.checked)}
                         className="w-4 h-4"
                       />
-                      <label htmlFor="jointWinner" className="text-gray-700">
+                      <label htmlFor="jointWinner" className="">
                         Joint Winner (Top 2 teams share position 1)
                       </label>
                     </div>
@@ -238,16 +425,16 @@ function League() {
                   <div className="flex flex-col items-center justify-center">
                     <label
                       htmlFor="leagueLogo"
-                      className="w-40 h-40 border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center cursor-pointer overflow-hidden"
+                      className="w-40 h-40 border-2 border-dashed border-black rounded-lg flex items-center justify-center cursor-pointer overflow-hidden text-gray-500"
                     >
                       {leagueLogo ? (
                         <img
                           src={URL.createObjectURL(leagueLogo)}
-                          alt="League Logo"
+                          alt={`${getEditionType()} Logo`}
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <span className="text-gray-500 text-sm">
+                        <span className="text-sm">
                           Click to Upload Logo
                         </span>
                       )}
@@ -267,7 +454,7 @@ function League() {
                   {Array.from({ length: numTeams }).map((_, idx) => (
                     <div
                       key={idx}
-                      className="border rounded-lg p-4 bg-gray-50 space-y-2"
+                      className="border border-black rounded-lg p-4 bg-gray-50 space-y-2"
                     >
                       <h3 className="font-semibold text-center">
                         Team {idx + 1}
@@ -283,6 +470,41 @@ function League() {
                         placeholder="Select a Team..."
                         isSearchable
                         className="text-sm"
+                        styles={{
+                          control: (base) => ({
+                            ...base,
+                            backgroundColor: 'white',
+                            borderColor: '#d1d5db',
+                            color: 'black',
+                            '&:hover': {
+                              borderColor: '#9ca3af',
+                            },
+                          }),
+                          menu: (base) => ({
+                            ...base,
+                            backgroundColor: 'white',
+                          }),
+                          option: (base, state) => ({
+                            ...base,
+                            backgroundColor: state.isFocused ? '#f3f4f6' : 'white',
+                            color: 'black',
+                            '&:active': {
+                              backgroundColor: '#e5e7eb',
+                            },
+                          }),
+                          singleValue: (base) => ({
+                            ...base,
+                            color: 'black',
+                          }),
+                          input: (base) => ({
+                            ...base,
+                            color: 'black',
+                          }),
+                          placeholder: (base) => ({
+                            ...base,
+                            color: '#6b7280',
+                          }),
+                        }}
                       />
                     </div>
                   ))}
@@ -292,23 +514,216 @@ function League() {
                   <button
                     type="button"
                     onClick={() => setShowForm(false)}
-                    className="border border-gray-500 bg-gray-400 px-4 py-2 rounded-lg 
-                       hover:bg-gray-500 hover:border-gray-600 transition"
+                    className="border border-black bg-gray-100 text-black px-4 py-2 rounded-lg 
+                       hover:bg-gray-200 transition"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="border border-green-600 bg-green-500 px-4 py-2 rounded-lg 
-                       hover:bg-green-600 hover:border-green-700 transition"
+                    className="border border-black bg-gray-100 text-black px-4 py-2 rounded-lg 
+                       hover:bg-gray-200 transition"
                   >
-                    Save League
+                    Save {getEditionType()}
                   </button>
                 </div>
               </form>
             </div>
           </div>
         )}
+
+        {/* Edit Modal Form */}
+        {showEditForm && !loading && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white text-black rounded-2xl shadow-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto ring-1 ring-black">
+              <h2 className="text-2xl font-bold mb-4">
+                Edit {getEditionType()}
+              </h2>
+              <form onSubmit={handleEditSubmit} className="space-y-6">
+                {/* Display Sport and Tournament */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="w-full border border-black bg-gray-50 text-black rounded-lg p-3">
+                    <label className="text-sm text-gray-600">Sport:</label>
+                    <p className="font-semibold">{Array.isArray(sportData) ? sportData.find(s => s._id === sport)?.name || "" : ""}</p>
+                  </div>
+                  <div className="w-full border border-black bg-gray-50 text-black rounded-lg p-3">
+                    <label className="text-sm text-gray-600">Tournament:</label>
+                    <p className="font-semibold">{tournamentData?.[0]?.name || ""}</p>
+                  </div>
+                </div>
+
+                {/* Two column layout */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left side */}
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      value={editLeagueName}
+                      onChange={(e) => setEditLeagueName(e.target.value)}
+                      placeholder={`${getEditionType()} Name`}
+                      required
+                      className="w-full border border-black bg-white text-black placeholder:text-gray-500 rounded-lg p-2"
+                    />
+
+                    <input
+                      type="number"
+                      value={editLeagueYear}
+                      onChange={(e) => setEditLeagueYear(e.target.value)}
+                      placeholder="Year"
+                      required
+                      className="w-full border border-black bg-white text-black placeholder:text-gray-500 rounded-lg p-2"
+                    />
+
+                    <input
+                      type="number"
+                      min="1"
+                      value={editNumTeams}
+                      onChange={handleEditNumTeamsChange}
+                      placeholder="Number of Teams"
+                      className="w-full border border-black bg-white text-black placeholder:text-gray-500 rounded-lg p-2"
+                      required
+                    />
+
+                    {/* Joint Winner Checkbox */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="editJointWinner"
+                        checked={editJointWinner}
+                        onChange={(e) => setEditJointWinner(e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                      <label htmlFor="editJointWinner" className="">
+                        Joint Winner (Top 2 teams share position 1)
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Right side (Image Upload + Preview) */}
+                  <div className="flex flex-col items-center justify-center">
+                    <label
+                      htmlFor="editLeagueLogo"
+                      className="w-40 h-40 border-2 border-dashed border-black rounded-lg flex items-center justify-center cursor-pointer overflow-hidden text-gray-500"
+                    >
+                      {editPreview ? (
+                        <img
+                          src={editPreview}
+                          alt={`${getEditionType()} Logo`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-sm">
+                          Click to Upload Logo
+                        </span>
+                      )}
+                      <input
+                        type="file"
+                        id="editLeagueLogo"
+                        accept="image/*"
+                        onChange={handleEditImageChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Teams Selection */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {Array.from({ length: editNumTeams }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="border border-black rounded-lg p-4 bg-gray-50 space-y-2"
+                    >
+                      <h3 className="font-semibold text-center">
+                        Team {idx + 1}
+                      </h3>
+                      <Select
+                        options={teamData.map((team) => ({
+                          value: team._id,
+                          label: team.name,
+                        }))}
+                        value={editTeams[idx]?.teamId ? {
+                          value: editTeams[idx].teamId,
+                          label: teamData.find(t => t._id === editTeams[idx].teamId)?.name || ""
+                        } : null}
+                        onChange={(selected) =>
+                          handleEditTeamChange(idx, selected ? selected.value : "")
+                        }
+                        placeholder="Select a Team..."
+                        isSearchable
+                        className="text-sm"
+                        styles={{
+                          control: (base) => ({
+                            ...base,
+                            backgroundColor: 'white',
+                            borderColor: '#d1d5db',
+                            color: 'black',
+                            '&:hover': {
+                              borderColor: '#9ca3af',
+                            },
+                          }),
+                          menu: (base) => ({
+                            ...base,
+                            backgroundColor: 'white',
+                          }),
+                          option: (base, state) => ({
+                            ...base,
+                            backgroundColor: state.isFocused ? '#f3f4f6' : 'white',
+                            color: 'black',
+                            '&:active': {
+                              backgroundColor: '#e5e7eb',
+                            },
+                          }),
+                          singleValue: (base) => ({
+                            ...base,
+                            color: 'black',
+                          }),
+                          input: (base) => ({
+                            ...base,
+                            color: 'black',
+                          }),
+                          placeholder: (base) => ({
+                            ...base,
+                            color: '#6b7280',
+                          }),
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditForm(false);
+                      setEditLeagueId("");
+                      setEditLeagueName("");
+                      setEditLeagueYear(new Date().getFullYear());
+                      setEditLeagueLogo(null);
+                      setEditPreview(null);
+                      setEditNumTeams(0);
+                      setEditTeams([]);
+                      setEditJointWinner(false);
+                    }}
+                    className="border border-black bg-gray-100 text-black px-4 py-2 rounded-lg 
+                       hover:bg-gray-200 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="border border-black bg-gray-100 text-black px-4 py-2 rounded-lg 
+                       hover:bg-gray-200 transition"
+                  >
+                    Update {getEditionType()}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

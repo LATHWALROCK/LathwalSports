@@ -136,3 +136,88 @@ exports.deleteLeague = async (req, res) => {
     });
   }
 };
+
+exports.updateLeague = async (req, res) => {
+  try {
+    const { _id, name, year, sport, tournament } = req.body;
+
+    if (!_id || !name || !year || !sport || !tournament) {
+      return res.status(400).json({
+        success: false,
+        message: "League ID, name, year, sport and tournament are required for update",
+      });
+    }
+
+    // Handle teams from req.body
+    const teams = [];
+    const teamKeys = Object.keys(req.body).filter((key) =>
+      key.startsWith("teams[")
+    );
+
+    // Extract unique indexes
+    const indexes = [
+      ...new Set(teamKeys.map((k) => k.match(/teams\[(\d+)\]/)[1])),
+    ];
+
+    for (let idx of indexes) {
+      const teamId = req.body[`teams[${idx}][team]`];
+      const position = req.body[`teams[${idx}][position]`];
+
+      if (!teamId) {
+        return res.status(400).json({
+          success: false,
+          message: `Missing team reference at index ${idx}`,
+        });
+      }
+
+      teams.push({
+        team: teamId,
+        position: position ? Number(position) : idx + 1,
+      });
+    }
+
+    // Prepare update data
+    const updateData = {
+      name,
+      year,
+      sport,
+      tournament,
+      teams,
+    };
+
+    // Handle image upload if provided
+    const leagueFile = req.files?.image;
+    if (leagueFile) {
+      const leagueUpload = await cloudinary.uploader.upload(
+        leagueFile.tempFilePath,
+        { folder: "leagues" }
+      );
+      updateData.leagueImageUrl = leagueUpload.secure_url;
+    }
+
+    const updatedLeague = await League.findByIdAndUpdate(
+      _id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedLeague) {
+      return res.status(404).json({
+        success: false,
+        message: "League not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      league: updatedLeague,
+      message: "League updated successfully",
+    });
+  } catch (error) {
+    console.error("UPDATE LEAGUE ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: "League cannot be updated. Please try again.",
+    });
+  }
+};

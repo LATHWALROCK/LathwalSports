@@ -16,7 +16,7 @@ exports.createTournament = async (req, res) => {
         const result = await cloudinary.uploader.upload(file.tempFilePath, options);
         const imageUrl = result.secure_url;
 
-        if (!name || !sport || !imageUrl || !type) {
+        if (!name || !sport || !type || !imageUrl) {
             return res.status(403).json({
                 success: false,
                 message: "All fields are required",
@@ -25,8 +25,8 @@ exports.createTournament = async (req, res) => {
         const tournament = await Tournament.create({
             name,
             sport,
-            imageUrl,
-            type
+            type,
+            imageUrl
         });
 
         return res.status(200).json({
@@ -47,7 +47,6 @@ exports.getTournament = async (req, res) => {
     try {
         const tournaments = await Tournament.find({}).populate("sport")
         .sort({sport:1})
-        .sort({type:1})
         .sort({name:1});
         res.status(200).json(
             {
@@ -117,6 +116,44 @@ exports.getTournamentBySport = async (req, res) => {
                 message: 'Server error'
             }
         )
+    }
+}
+
+exports.updateTournament = async (req, res) => {
+    try {
+        const { _id, name, sport, type } = req.body;
+
+        if (!_id || !name || !sport || !type) {
+            return res.status(400).json({
+                success: false,
+                message: "Tournament ID, name, sport, and type are required",
+            });
+        }
+
+        const updatedTournament = await Tournament.findByIdAndUpdate(
+            _id,
+            { name: name.trim(), sport, type },
+            { new: true }
+        ).populate("sport");
+
+        if (!updatedTournament) {
+            return res.status(404).json({
+                success: false,
+                message: "Tournament not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            tournament: updatedTournament,
+            message: "Tournament updated successfully",
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error while updating tournament",
+        });
     }
 }
 

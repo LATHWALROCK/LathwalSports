@@ -13,7 +13,12 @@ const teamSchema = new mongoose.Schema(
     },
     city: {
       type: String,
-      required: true,
+      required: false,
+      trim: true,
+    },
+    country: {
+      type: String,
+      required: false,
       trim: true,
     },
     sport: {
@@ -21,10 +26,15 @@ const teamSchema = new mongoose.Schema(
       ref: "sport",
       required: true,
     },
+    type: {
+      type: String,
+      enum: ["National", "League"],
+      required: true,
+    },
     tournament: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "tournament",
-      required: true,
+      required: false,
     },
   },
   { timestamps: true }

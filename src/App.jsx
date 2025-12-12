@@ -9,14 +9,17 @@ import Team from "./pages/Team"
 function App() {
 
   return (
-    <div>
+    <div className="flex flex-col min-h-screen">
       <Navbar></Navbar>
-      <Routes>
-        <Route path="/" element={<Sport />} />
-        <Route path="/tournament" element={<Tournament />} />
-        <Route path="/leagues" element={<League />} />
-        <Route path="/teams" element={<Team />} />
-      </Routes>
+      <div className="h-16"></div>
+      <div className="flex-1">
+        <Routes>
+          <Route path="/" element={<Sport />} />
+          <Route path="/tournament" element={<Tournament />} />
+          <Route path="/leagues" element={<League />} />
+          <Route path="/teams" element={<Team />} />
+        </Routes>
+      </div>
     </div>
   )
 }

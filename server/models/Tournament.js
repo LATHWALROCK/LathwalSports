@@ -12,12 +12,12 @@ const tournamentSchema = new mongoose.Schema(
       ref: "sport",
       required: true,
     },
-    imageUrl: {
-      type: String,
-      required: true,
-      trim: true,
-    },
     type: {
+      type: String,
+      enum: ["International", "League"],
+      required: true,
+    },
+    imageUrl: {
       type: String,
       required: true,
       trim: true,

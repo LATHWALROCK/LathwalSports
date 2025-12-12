@@ -5,13 +5,21 @@
 html,
 body {
   overflow-x: hidden;
+  height: 100%;
+  overflow-y: auto;
+}
+
+#root {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ===== Scrollbar CSS ===== */
 /* Firefox */
 * {
   scrollbar-width: auto;
-  scrollbar-color: #afb2bf;
+  scrollbar-color: #888888 #f9f9f9;
 }
 
 /* Chrome, Edge, and Safari */
@@ -20,11 +28,11 @@ body {
 }
 
 *::-webkit-scrollbar-track {
-  background: #000814;
+  background: #f9f9f9;
 }
 
 *::-webkit-scrollbar-thumb {
-  background-color: #afb2bf;
+  background-color: #888888;
   border-radius: 10px;
   visibility: hidden;
 }

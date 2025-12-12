@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit } from "lucide-react";
 
-const Sport = ({ title,_id, onDelete }) => {
+const Sport = ({ title, _id, onDelete, onEdit }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [hovered, setHovered] = useState(false);
 
@@ -25,45 +25,60 @@ const Sport = ({ title,_id, onDelete }) => {
     setShowConfirm(false);
   };
 
+  const handleEditClick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onEdit(_id, title);
+  };
+
   return (
     <div className="relative">
-      {/* Delete Button */}
-      {!showConfirm && hovered && (<button
-        onClick={handleDeleteClick}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        className="absolute top-2 right-2 z-10 bg-red-500 text-black rounded-full p-1 hover:bg-red-600"
-      >
-        <Trash2 size={20} />
-      </button>)}
+      {!showConfirm && hovered && (
+        <div className="absolute top-2 right-2 z-10 flex gap-1">
+          <button
+            onClick={handleEditClick}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            className="border border-black bg-gray-100 text-black rounded-full p-1 hover:bg-gray-200 transition"
+          >
+            <Edit size={20} />
+          </button>
+          <button
+            onClick={handleDeleteClick}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            className="border border-black bg-gray-100 text-black rounded-full p-1 hover:bg-gray-200 transition"
+          >
+            <Trash2 size={20} />
+          </button>
+        </div>
+      )}
 
-      {/* Tile with Link */}
-      <Link to={`/tournament`}>
+      <Link to={`/tournament?sport=${_id}`}>
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          className="bg-white shadow-md rounded-2xl p-6 flex items-center justify-center 
-                     text-lg font-semibold text-gray-700 hover:shadow-xl 
+          className="bg-gray-100 ring-1 ring-black rounded-2xl p-6 flex items-center justify-center 
+                     text-lg font-semibold text-black hover:bg-gray-200 
                      hover:scale-105 transition-all duration-300 cursor-pointer"
         >
           {title}
         </div>
       </Link>
 
-      {/* Confirmation Box */}
       {showConfirm && (
-        <div className="absolute inset-0 bg-white rounded-2xl flex flex-col items-center justify-center shadow-lg">
-          <p className="text-gray-800 font-medium">Delete "{title}"?</p>
+        <div className="absolute inset-0 bg-white rounded-2xl flex flex-col items-center justify-center shadow-lg ring-1 ring-black">
+          <p className="font-medium text-black">Delete "{title}"?</p>
           <div className="flex gap-3">
             <button
               onClick={handleConfirm}
-              className="px-3 py-1 bg-red-500 text-gray-700e rounded-lg hover:bg-red-600"
+              className="border border-black bg-gray-100 text-black px-3 py-1 rounded-lg hover:bg-gray-200 transition"
             >
               Yes
             </button>
             <button
               onClick={handleCancel}
-              className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+              className="border border-black bg-gray-100 text-black px-3 py-1 rounded-lg hover:bg-gray-200 transition"
             >
               No
             </button>

@@ -8,7 +8,7 @@ import {
   tournamentEndpoints,
 } from "../services/apis";
 
-const { GET_TEAM, CREATE_TEAM, DELETE_TEAM } = teamEndpoints;
+const { GET_TEAM, CREATE_TEAM, UPDATE_TEAM, DELETE_TEAM } = teamEndpoints;
 const { GET_SPORT } = sportEndpoints;
 const { GET_TOURNAMENT_BY_SPORT } = tournamentEndpoints;
 
@@ -19,38 +19,37 @@ function Team() {
   const [formData, setFormData] = useState({
     name: "",
     city: "",
+    country: "",
     sport: "",
+    type: "",
     tournament: "",
   });
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [showTypeSelection, setShowTypeSelection] = useState(false);
+  const [teamType, setTeamType] = useState(""); // "National" or "League"
+  const [editData, setEditData] = useState({
+    _id: "",
+    name: "",
+    city: "",
+    country: "",
+    sport: "",
+    type: "",
+    tournament: "",
+  });
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editImage, setEditImage] = useState(null);
+  const [editPreview, setEditPreview] = useState(null);
 
-  // 👇 collapsed state (default collapsed)
-  const [collapsedSports, setCollapsedSports] = useState({});
-  const [collapsedTournaments, setCollapsedTournaments] = useState({});
 
-  const { name, city, sport, tournament } = formData;
+  const { name, city, country, sport, type, tournament } = formData;
 
   // Fetch all teams
   const fetchData = () => {
     apiConnector("GET", GET_TEAM)
       .then((response) => {
         setData(response.data.data);
-
-        // 🔹 Collapse all sports & tournaments by default
-        const sportsCollapsed = {};
-        const tournamentsCollapsed = {};
-        response.data.data.forEach((team) => {
-          if (team.sport?._id) {
-            sportsCollapsed[team.sport._id] = true;
-          }
-          if (team.sport?._id && team.tournament?._id) {
-            tournamentsCollapsed[`${team.sport._id}-${team.tournament._id}`] = true;
-          }
-        });
-        setCollapsedSports(sportsCollapsed);
-        setCollapsedTournaments(tournamentsCollapsed);
       })
       .catch((error) => {
         toast.error("Failed to fetch team");
@@ -71,7 +70,8 @@ function Team() {
   };
 
   // Fetch tournaments based on selected sport (for dropdown)
-  const fetchTournamentData = (selectedSport) => {
+  // Only fetch League tournaments when type is League
+  const fetchTournamentData = (selectedSport, teamType) => {
     if (!selectedSport) {
       setTournamentData([]);
       return;
@@ -84,7 +84,22 @@ function Team() {
       { sport: selectedSport }
     )
       .then((response) => {
-        setTournamentData(response.data.data);
+        // Filter tournaments based on team type
+        if (teamType === "League") {
+          // League teams can only select League tournaments
+          const leagueTournaments = response.data.data.filter(
+            (t) => t.type === "League"
+          );
+          setTournamentData(leagueTournaments);
+        } else if (teamType === "National") {
+          // National teams can only select International tournaments
+          const internationalTournaments = response.data.data.filter(
+            (t) => t.type === "International"
+          );
+          setTournamentData(internationalTournaments);
+        } else {
+          setTournamentData([]);
+        }
       })
       .catch((error) => {
         toast.error("Failed to fetch tournaments");
@@ -103,8 +118,33 @@ function Team() {
 
     if (name === "sport") {
       setFormData((prev) => ({ ...prev, tournament: "" }));
-      fetchTournamentData(value);
+      // Fetch tournaments only if type is League
+      if (type === "League") {
+        fetchTournamentData(value, type);
+      }
     }
+  };
+
+  const handleOpenTypeSelection = () => {
+    setShowTypeSelection(true);
+  };
+
+  const handleSelectType = (teamType) => {
+    setTeamType(teamType);
+    setFormData((prev) => ({ ...prev, type: teamType, tournament: "" }));
+
+    // If sport is already selected, fetch filtered tournaments
+    if (sport) {
+      fetchTournamentData(sport, teamType);
+    }
+
+    setShowTypeSelection(false);
+    setShowForm(true);
+  };
+
+  const getSportName = () => {
+    const foundSport = sportData.find((s) => s._id === sport);
+    return foundSport ? foundSport.name : "";
   };
 
   // Image handler
@@ -119,13 +159,58 @@ function Team() {
   // Submit form
   const handleOnSubmit = (e) => {
     e.preventDefault();
+
+    // Basic validation
+    if (!name || !name.trim()) {
+      toast.error("Team name is required");
+      return;
+    }
+
+    if (!sport || !sport.trim()) {
+      toast.error("Sport selection is required");
+      return;
+    }
+
+    if (!type || !type.trim()) {
+      toast.error("Team type is required");
+      return;
+    }
+
+    if (type === "National" && (!country || !country.trim())) {
+      toast.error("Country is required for National teams");
+      return;
+    }
+
+    if (type === "League") {
+      if (!city || !city.trim()) {
+        toast.error("City is required for League teams");
+        return;
+      }
+      if (!tournament || !tournament.trim()) {
+        toast.error("Tournament selection is required for League teams");
+        return;
+      }
+    }
+
+    if (!image) {
+      toast.error("Team logo/image is required");
+      return;
+    }
+
     const toastId = toast.loading("Creating team...");
 
     const formDataObj = new FormData();
-    formDataObj.append("name", name);
-    formDataObj.append("city", city);
-    formDataObj.append("sport", sport);
-    formDataObj.append("tournament", tournament);
+    formDataObj.append("name", name.trim());
+    if (type === "National") {
+      formDataObj.append("country", country.trim());
+    } else {
+      formDataObj.append("city", city.trim());
+    }
+    formDataObj.append("sport", sport.trim());
+    formDataObj.append("type", type.trim());
+    if (type === "League") {
+      formDataObj.append("tournament", tournament.trim());
+    }
     formDataObj.append("image", image);
 
     apiConnector("POST", CREATE_TEAM, formDataObj, {
@@ -136,10 +221,13 @@ function Team() {
           throw new Error(response.data.message);
         }
         toast.success("Team created successfully");
-        setFormData({ name: "", city: "", sport: "", tournament: "" });
+        // Reset form
+        setFormData({ name: "", city: "", country: "", sport: "", type: "", tournament: "" });
         setImage(null);
         setPreview(null);
+        setTeamType("");
         setShowForm(false);
+        setShowTypeSelection(false);
         setTournamentData([]);
         fetchData();
       })
@@ -172,33 +260,179 @@ function Team() {
       });
   };
 
+  // Edit team
+  const handleEdit = (_id, teamData) => {
+    setEditData({
+      _id,
+      name: teamData.name || "",
+      city: teamData.city || "",
+      country: teamData.country || "",
+      sport: teamData.sport?._id || "",
+      type: teamData.type || "",
+      tournament: teamData.tournament?._id || "",
+    });
+    setEditPreview(teamData.imageUrl || null);
+    setShowEditForm(true);
+
+    // Fetch tournaments if it's a league team
+    if (teamData.type === "League" && teamData.sport?._id) {
+      fetchTournamentData(teamData.sport._id, "League");
+    }
+  };
+
+  // Handle edit form field changes
+  const handleEditOnChange = (e) => {
+    const { name, value } = e.target;
+
+    setEditData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+
+    if (name === "sport") {
+      setEditData((prev) => ({ ...prev, tournament: "" }));
+      // Fetch tournaments only if type is League
+      if (editData.type === "League") {
+        fetchTournamentData(value, editData.type);
+      }
+    }
+  };
+
+  // Handle edit image change
+  const handleEditImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setEditImage(file);
+      setEditPreview(URL.createObjectURL(file));
+    }
+  };
+
+  // Submit edit form
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+
+    // Basic validation
+    if (!editData.name || !editData.name.trim()) {
+      toast.error("Team name is required");
+      return;
+    }
+
+    if (!editData.sport || !editData.sport.trim()) {
+      toast.error("Sport selection is required");
+      return;
+    }
+
+    if (!editData.type || !editData.type.trim()) {
+      toast.error("Team type is required");
+      return;
+    }
+
+    if (editData.type === "National" && (!editData.country || !editData.country.trim())) {
+      toast.error("Country is required for National teams");
+      return;
+    }
+
+    if (editData.type === "League") {
+      if (!editData.city || !editData.city.trim()) {
+        toast.error("City is required for League teams");
+        return;
+      }
+      if (!editData.tournament || !editData.tournament.trim()) {
+        toast.error("Tournament selection is required for League teams");
+        return;
+      }
+    }
+
+    const toastId = toast.loading("Updating team...");
+
+    const formDataObj = new FormData();
+    formDataObj.append("_id", editData._id);
+    formDataObj.append("name", editData.name.trim());
+    if (editData.type === "National") {
+      formDataObj.append("country", editData.country.trim());
+    } else {
+      formDataObj.append("city", editData.city.trim());
+    }
+    formDataObj.append("sport", editData.sport.trim());
+    formDataObj.append("type", editData.type.trim());
+    if (editData.type === "League") {
+      formDataObj.append("tournament", editData.tournament.trim());
+    }
+    if (editImage) {
+      formDataObj.append("image", editImage);
+    }
+
+    apiConnector("PUT", UPDATE_TEAM, formDataObj, {
+      "Content-Type": "multipart/form-data",
+    })
+      .then((response) => {
+        if (!response.data.success) {
+          throw new Error(response.data.message);
+        }
+        toast.success("Team updated successfully");
+        // Reset edit form
+        setEditData({
+          _id: "",
+          name: "",
+          city: "",
+          country: "",
+          sport: "",
+          type: "",
+          tournament: "",
+        });
+        setEditImage(null);
+        setEditPreview(null);
+        setShowEditForm(false);
+        setTournamentData([]);
+        fetchData();
+      })
+      .catch((error) => {
+        console.error("UPDATE TEAM ERROR:", error);
+        toast.error("Team update failed");
+      })
+      .finally(() => {
+        toast.dismiss(toastId);
+      });
+  };
+
   useEffect(() => {
     fetchData();
     fetchSportData();
   }, []);
 
-  // ---- Group teams by Sport -> Tournament ----
+  // ---- Group teams by Sport -> National Teams + Tournament Groups ----
   const grouped = data.reduce((acc, team) => {
     const sportObj = team?.sport || {};
     const sportId = sportObj?._id || "unknown-sport";
     const sportName = sportObj?.name || "Unknown Sport";
 
     if (!acc[sportId]) {
-      acc[sportId] = { sportName, tournaments: {} };
-    }
-
-    const tournamentObj = team?.tournament || {};
-    const tournamentId = tournamentObj?._id || "no-tournament";
-    const tournamentName = tournamentObj?.name || "Miscellaneous";
-
-    if (!acc[sportId].tournaments[tournamentId]) {
-      acc[sportId].tournaments[tournamentId] = {
-        tournamentName,
-        teams: [],
+      acc[sportId] = {
+        sportName,
+        nationalTeams: [],
+        tournaments: {}
       };
     }
 
-    acc[sportId].tournaments[tournamentId].teams.push(team);
+    // Separate national teams from league teams
+    if (team.type === "National") {
+      acc[sportId].nationalTeams.push(team);
+    } else {
+      // League teams grouped by tournament
+      const tournamentObj = team?.tournament || {};
+      const tournamentId = tournamentObj?._id || "no-tournament";
+      const tournamentName = tournamentObj?.name || "Miscellaneous";
+
+      if (!acc[sportId].tournaments[tournamentId]) {
+        acc[sportId].tournaments[tournamentId] = {
+          tournamentName,
+          teams: [],
+        };
+      }
+
+      acc[sportId].tournaments[tournamentId].teams.push(team);
+    }
+
     return acc;
   }, {});
 
@@ -206,32 +440,16 @@ function Team() {
     a.sportName.localeCompare(b.sportName)
   );
 
-  // ---- Collapsible toggles ----
-  const toggleSport = (sportId) => {
-    setCollapsedSports((prev) => ({
-      ...prev,
-      [sportId]: !prev[sportId],
-    }));
-  };
-
-  const toggleTournament = (sportId, tournamentId) => {
-    setCollapsedTournaments((prev) => ({
-      ...prev,
-      [`${sportId}-${tournamentId}`]: !prev[`${sportId}-${tournamentId}`],
-    }));
-  };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10 px-4">
+    <div className="bg-gradient-to-b from-white to-gray-50 text-black py-10 px-4">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
+        <h1 className="text-3xl font-bold text-center mb-8">
           Teams
         </h1>
 
         {/* Grouped Teams */}
-        {sportsGroups.length === 0 ? (
-          <p className="text-center text-gray-600">No teams available</p>
-        ) : (
+        {sportsGroups.length > 0 &&
           sportsGroups.map(([sportId, sportGroup]) => {
             const tournamentGroups = Object.entries(
               sportGroup.tournaments
@@ -239,153 +457,227 @@ function Team() {
               a.tournamentName.localeCompare(b.tournamentName)
             );
 
-            const sportCollapsed = collapsedSports[sportId];
-
             return (
               <div key={sportId} className="mb-10 pb-4">
                 {/* Sport Header */}
-                <h2
-                  onClick={() => toggleSport(sportId)}
-                  className="text-2xl font-semibold mb-2 cursor-pointer flex justify-between items-center bg-gray-200 px-4 p-4 rounded-lg shadow"
-                >
+                <h2 className="text-2xl font-semibold mb-4 bg-gray-100 px-4 py-4 rounded-lg">
                   {sportGroup.sportName}
-                  <span>{sportCollapsed ? "▼" : "▲"}</span>
                 </h2>
 
-                {!sportCollapsed &&
-                  tournamentGroups.map(([tournamentId, tGroup]) => {
-                    const tourCollapsed =
-                      collapsedTournaments[`${sportId}-${tournamentId}`];
+                <div className="ml-4">
+                    {/* National Teams Section */}
+                    {sportGroup.nationalTeams.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-xl font-medium mb-3 text-blue-800">
+                          National Teams
+                        </h3>
+                        <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+                          {sportGroup.nationalTeams.map((team) => (
+                            <li key={team._id}>
+                              <IndividualTeam
+                                title={team.name}
+                                image={team.imageUrl}
+                                _id={team._id}
+                                onDelete={handleDelete}
+                                onEdit={handleEdit}
+                                teamData={team}
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
-                    return (
-                      <div key={tournamentId} className="mb-4 ml-6">
-                        <h3
-                          onClick={() =>
-                            toggleTournament(sportId, tournamentId)
-                          }
-                          className="text-xl font-medium mb-2 cursor-pointer flex justify-between items-center bg-gray-100 px-3 py-2 rounded"
-                        >
+                    {/* Tournament Groups */}
+                    {tournamentGroups.map(([tournamentId, tGroup]) => (
+                      <div key={tournamentId} className="mb-6">
+                        <h3 className="text-xl font-medium mb-3 bg-gray-50 px-3 py-3 rounded">
                           {tGroup.tournamentName}
-                          <span>{tourCollapsed ? "▼" : "▲"}</span>
                         </h3>
 
-                        {!tourCollapsed && (
-                          <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                        <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
                             {tGroup.teams.map((team) => (
-                              <li key={team._id}>
-                                <IndividualTeam
-                                  title={team.name}
-                                  image={team.imageUrl}
-                                  _id={team._id}
-                                  onDelete={handleDelete}
-                                />
-                              </li>
+                            <li key={team._id}>
+                              <IndividualTeam
+                                title={team.name}
+                                image={team.imageUrl}
+                                _id={team._id}
+                                onDelete={handleDelete}
+                                onEdit={handleEdit}
+                                teamData={team}
+                              />
+                            </li>
                             ))}
-                          </ul>
-                        )}
+                        </ul>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
               </div>
             );
-          })
-        )}
+          })}
 
-        {/* Add Team button */}
+        {/* Single Add Team Button */}
         <button
-          onClick={() => setShowForm(true)}
-          className="w-full bg-white shadow-md rounded-2xl p-6 flex items-center justify-center 
-          text-2xl font-bold text-gray-700 hover:shadow-xl hover:scale-[1.02] 
+          onClick={handleOpenTypeSelection}
+          className="w-full bg-gray-100 ring-1 ring-black rounded-2xl p-6 flex items-center justify-center
+          text-xl font-bold text-black hover:bg-gray-200 hover:scale-[1.02]
           transition-all duration-300 cursor-pointer"
         >
           + Add Team
         </button>
 
+        {/* Type Selection Modal */}
+        {showTypeSelection && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white text-black p-8 rounded-xl shadow-lg w-full max-w-md ring-1 ring-black">
+              <h2 className="text-xl font-bold mb-6 text-center">Select Team Type</h2>
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={() => handleSelectType("National")}
+                  className="w-full bg-gray-100 ring-1 ring-black rounded-lg p-4 text-lg font-semibold text-black hover:bg-gray-200 transition"
+                >
+                  National Team
+                </button>
+                <button
+                  onClick={() => handleSelectType("League")}
+                  className="w-full bg-gray-100 ring-1 ring-black rounded-lg p-4 text-lg font-semibold text-black hover:bg-gray-200 transition"
+                >
+                  League Team
+                </button>
+                <button
+                  onClick={() => setShowTypeSelection(false)}
+                  className="w-full border border-black bg-white text-black px-4 py-2 rounded-lg hover:bg-gray-100 transition mt-2"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Add Team Modal */}
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl shadow-lg w-[90%] max-w-lg p-8 relative">
+            <div className="bg-white text-black rounded-2xl shadow-lg w-[90%] max-w-lg p-8 relative ring-1 ring-black">
               <button
-                onClick={() => {
-                  setShowForm(false);
-                  setFormData({
-                    name: "",
-                    city: "",
-                    sport: "",
-                    tournament: "",
-                  });
-                  setImage(null);
-                  setPreview(null);
-                  setTournamentData([]);
-                }}
+                    onClick={() => {
+                      setShowForm(false);
+                      setShowTypeSelection(false);
+                      setFormData({
+                        name: "",
+                        city: "",
+                        country: "",
+                        sport: "",
+                        type: "",
+                        tournament: "",
+                      });
+                      setImage(null);
+                      setPreview(null);
+                      setTeamType("");
+                      setTournamentData([]);
+                    }}
                 className="absolute top-3 right-3 text-gray-500 hover:text-red-500 text-xl"
               >
                 ✖
               </button>
 
-              <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-                Add New Team
+              <h2 className="text-2xl font-bold mb-6 text-center">
+                Add {teamType === "National" ? "National Team" : "League"}
               </h2>
 
               <form
                 onSubmit={handleOnSubmit}
                 className="flex flex-col gap-6 items-center"
               >
+                {/* Display Type */}
+                <div className="w-full border border-black bg-gray-50 text-black rounded-lg p-3">
+                  <label className="text-sm text-gray-600">Type:</label>
+                  <p className="font-semibold">{type}</p>
+                </div>
+
+                {/* Display Sport if selected, otherwise show dropdown */}
+                {sport ? (
+                  <div className="w-full border border-black bg-gray-50 text-black rounded-lg p-3">
+                    <label className="text-sm text-gray-600">Sport:</label>
+                    <p className="font-semibold">{getSportName()}</p>
+                  </div>
+                ) : (
+                  <select
+                    name="sport"
+                    value={sport || ""}
+                    onChange={handleOnChange}
+                    className="w-full border border-black bg-white text-black rounded-lg p-3
+                    focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Select Sport</option>
+                    {sportData.map((s) => (
+                      <option key={s._id} value={s._id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
                 <input
                   type="text"
                   name="name"
-                  value={name}
+                  value={name || ""}
                   onChange={handleOnChange}
                   placeholder="Enter team name"
-                  className="w-full border border-gray-300 rounded-lg p-3 
+                  className="w-full border border-black bg-white text-black placeholder:text-gray-500 rounded-lg p-3
                   focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
-                <input
-                  type="text"
-                  name="city"
-                  value={city}
-                  onChange={handleOnChange}
-                  placeholder="Enter team city"
-                  className="w-full border border-gray-300 rounded-lg p-3 
-                  focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <select
-                  name="sport"
-                  value={sport}
-                  onChange={handleOnChange}
-                  className="w-full border border-gray-300 rounded-lg p-3 
-                  focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Select Sport</option>
-                  {sportData.map((s) => (
-                    <option key={s._id} value={s._id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  name="tournament"
-                  value={tournament}
-                  onChange={handleOnChange}
-                  className="w-full border border-gray-300 rounded-lg p-3 
-                  focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                  disabled={!sport}
-                >
-                  <option value="">Select Tournament</option>
-                  {tournamentData.map((t) => (
-                    <option key={t._id} value={t._id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
+                {type === "National" ? (
+                  <input
+                    type="text"
+                    name="country"
+                    value={country || ""}
+                    onChange={handleOnChange}
+                    placeholder="Enter country"
+                    className="w-full border border-black bg-white text-black placeholder:text-gray-500 rounded-lg p-3
+                    focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    name="city"
+                    value={city || ""}
+                    onChange={handleOnChange}
+                    placeholder="Enter team city"
+                    className="w-full border border-black bg-white text-black placeholder:text-gray-500 rounded-lg p-3
+                    focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                )}
+                
+                {/* Tournament selection - only for League teams */}
+                {type === "League" && (
+                  <select
+                    name="tournament"
+                    value={tournament || ""}
+                    onChange={handleOnChange}
+                    className="w-full border border-black bg-white text-black rounded-lg p-3
+                    focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                    disabled={!sport}
+                  >
+                    <option value="">Select Tournament</option>
+                    {tournamentData.map((t) => (
+                      <option key={t._id} value={t._id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                <input type="hidden" name="type" value={type} />
                 <label
                   htmlFor="imageUpload"
-                  className="w-40 h-40 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center 
-                  cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition"
+                  className="w-40 h-40 border-2 border-dashed border-black rounded-xl flex items-center justify-center 
+                  cursor-pointer text-gray-500 hover:border-black transition"
                 >
                   {preview ? (
                     <img
@@ -394,7 +686,7 @@ function Team() {
                       className="w-full h-full object-cover rounded-xl"
                     />
                   ) : (
-                    <span className="text-gray-500">Upload Logo</span>
+                    <span>Upload Logo</span>
                   )}
                 </label>
                 <input
@@ -409,8 +701,8 @@ function Team() {
                 <div className="flex gap-3 mt-4">
                   <button
                     type="submit"
-                    className="border border-green-600 bg-green-500 px-6 py-2 rounded-lg  
-                    hover:bg-green-600 hover:border-green-700 transition"
+                    className="border border-black bg-gray-100 text-black px-6 py-2 rounded-lg  
+                    hover:bg-gray-200 transition"
                   >
                     Save
                   </button>
@@ -422,14 +714,16 @@ function Team() {
                         name: "",
                         city: "",
                         sport: "",
+                        type: "",
                         tournament: "",
                       });
                       setImage(null);
                       setPreview(null);
+                      setTeamType("");
                       setTournamentData([]);
                     }}
-                    className="border border-gray-500 bg-gray-400 px-6 py-2 rounded-lg 
-                    hover:bg-gray-500 hover:border-gray-600 transition"
+                    className="border border-black bg-gray-100 text-black px-6 py-2 rounded-lg 
+                    hover:bg-gray-200 transition"
                   >
                     Cancel
                   </button>
@@ -438,6 +732,180 @@ function Team() {
             </div>
           </div>
         )}
+
+        {/* Edit Team Modal */}
+        {showEditForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white text-black rounded-2xl shadow-lg w-[90%] max-w-lg p-8 relative ring-1 ring-black">
+              <button
+                onClick={() => {
+                  setShowEditForm(false);
+                  setEditData({
+                    _id: "",
+                    name: "",
+                    city: "",
+                    country: "",
+                    sport: "",
+                    type: "",
+                    tournament: "",
+                  });
+                  setEditImage(null);
+                  setEditPreview(null);
+                  setTournamentData([]);
+                }}
+                className="absolute top-3 right-3 text-gray-500 hover:text-red-500 text-xl"
+              >
+                ✖
+              </button>
+
+              <h2 className="text-2xl font-bold mb-6 text-center">
+                Edit {editData.type === "National" ? "National Team" : "League"}
+              </h2>
+
+              <form
+                onSubmit={handleEditSubmit}
+                className="flex flex-col gap-6 items-center"
+              >
+                {/* Display Type */}
+                <div className="w-full border border-black bg-gray-50 text-black rounded-lg p-3">
+                  <label className="text-sm text-gray-600">Type:</label>
+                  <p className="font-semibold">{editData.type}</p>
+                </div>
+
+                {/* Sport Selection */}
+                <select
+                  name="sport"
+                  value={editData.sport || ""}
+                  onChange={handleEditOnChange}
+                  className="w-full border border-black bg-white text-black rounded-lg p-3
+                  focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Select Sport</option>
+                  {sportData.map((s) => (
+                    <option key={s._id} value={s._id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  type="text"
+                  name="name"
+                  value={editData.name || ""}
+                  onChange={handleEditOnChange}
+                  placeholder="Enter team name"
+                  className="w-full border border-black bg-white text-black placeholder:text-gray-500 rounded-lg p-3
+                  focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+
+                {editData.type === "National" ? (
+                  <input
+                    type="text"
+                    name="country"
+                    value={editData.country || ""}
+                    onChange={handleEditOnChange}
+                    placeholder="Enter country"
+                    className="w-full border border-black bg-white text-black placeholder:text-gray-500 rounded-lg p-3
+                    focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    name="city"
+                    value={editData.city || ""}
+                    onChange={handleEditOnChange}
+                    placeholder="Enter team city"
+                    className="w-full border border-black bg-white text-black placeholder:text-gray-500 rounded-lg p-3
+                    focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                )}
+
+                {/* Tournament selection - only for League teams */}
+                {editData.type === "League" && (
+                  <select
+                    name="tournament"
+                    value={editData.tournament || ""}
+                    onChange={handleEditOnChange}
+                    className="w-full border border-black bg-white text-black rounded-lg p-3
+                    focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                    disabled={!editData.sport}
+                  >
+                    <option value="">Select Tournament</option>
+                    {tournamentData.map((t) => (
+                      <option key={t._id} value={t._id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                <input type="hidden" name="type" value={editData.type} />
+
+                <label
+                  htmlFor="editImageUpload"
+                  className="w-40 h-40 border-2 border-dashed border-black rounded-xl flex items-center justify-center
+                  cursor-pointer text-gray-500 hover:border-black transition"
+                >
+                  {editPreview ? (
+                    <img
+                      src={editPreview}
+                      alt="Preview"
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+                  ) : (
+                    <span>Upload Logo</span>
+                  )}
+                </label>
+                <input
+                  id="editImageUpload"
+                  type="file"
+                  name="image"
+                  accept="image/*"
+                  onChange={handleEditImageChange}
+                  className="hidden"
+                />
+
+                <div className="flex gap-3 mt-4">
+                  <button
+                    type="submit"
+                    className="border border-black bg-gray-100 text-black px-6 py-2 rounded-lg
+                    hover:bg-gray-200 transition"
+                  >
+                    Update
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditForm(false);
+                      setEditData({
+                        _id: "",
+                        name: "",
+                        city: "",
+                        country: "",
+                        sport: "",
+                        type: "",
+                        tournament: "",
+                      });
+                      setEditImage(null);
+                      setEditPreview(null);
+                      setTournamentData([]);
+                    }}
+                    className="border border-black bg-gray-100 text-black px-6 py-2 rounded-lg
+                    hover:bg-gray-200 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

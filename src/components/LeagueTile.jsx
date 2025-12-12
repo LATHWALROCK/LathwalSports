@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit } from "lucide-react";
 import Team from "../components/Team";
 
-const LeagueTile = ({ title, logo, teams, _id, onDelete }) => {
+const LeagueTile = ({ title, logo, teams, _id, onDelete, onEdit, leagueData }) => {
   // Find all winners (teams with position = 1)
   const winners = teams.filter((t) => t.position === 1);
 
@@ -28,55 +28,66 @@ const LeagueTile = ({ title, logo, teams, _id, onDelete }) => {
     setShowConfirm(false);
   };
 
+  const handleEditClick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onEdit(_id, leagueData);
+  };
+
   return (
     <div className="relative">
-      {/* Delete Button */}
       {!showConfirm && hovered && (
-        <button
-          onClick={handleDeleteClick}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-          className="absolute top-2 right-2 z-10 bg-red-500 text-black rounded-full p-1 hover:bg-red-600"
-        >
-          <Trash2 size={20} />
-        </button>
+        <div className="absolute top-2 right-2 z-10 flex gap-1">
+          <button
+            onClick={handleEditClick}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            className="border border-black bg-gray-100 text-black rounded-full p-1 hover:bg-gray-200 transition"
+          >
+            <Edit size={20} />
+          </button>
+          <button
+            onClick={handleDeleteClick}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            className="border border-black bg-gray-100 text-black rounded-full p-1 hover:bg-gray-200 transition"
+          >
+            <Trash2 size={20} />
+          </button>
+        </div>
       )}
 
       <div
-        className="bg-white shadow-md rounded-2xl p-6 mb-6"
+        className="bg-gray-100 ring-1 ring-black rounded-2xl p-6 mb-6 text-black"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        {/* Title at Top */}
-        <h2 className="text-2xl font-bold text-gray-800 text-center mb-3">
+        <h2 className="text-2xl font-bold text-center mb-3">
           {title}
         </h2>
 
-        {/* First Row: League Logo + Winners */}
         <div className="flex flex-col items-center mb-4">
           <div className="flex items-center gap-16 flex-wrap justify-center">
-            {/* League Logo */}
             <div className="flex flex-col items-center">
               <img
                 src={logo}
                 alt="League Logo"
-                className="w-32 h-32 object-contain rounded-xl"
+                className="w-32 h-32 object-contain rounded-xl bg-white"
               />
             </div>
 
-            {/* Winner(s) */}
             {winners.length > 0 && (
               <div className="flex flex-col items-center">
                 <div className="flex flex-wrap gap-6 justify-center">
                   {winners.map((winner, idx) => (
                     <div
                       key={idx}
-                      className="flex flex-col items-center bg-green-50 p-2 rounded-lg"
+                      className="flex flex-col items-center bg-white p-2 rounded-lg"
                     >
                       <img
                         src={winner.team.imageUrl}
                         alt={winner.team.name}
-                        className="w-32 h-32 object-contain rounded-xl"
+                        className="w-32 h-32 object-contain rounded-xl bg-white"
                       />
                     </div>
                   ))}
@@ -86,7 +97,6 @@ const LeagueTile = ({ title, logo, teams, _id, onDelete }) => {
           </div>
         </div>
 
-        {/* Grid of Teams */}
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
           {teams.map((team, idx) => (
             <Team
@@ -98,20 +108,19 @@ const LeagueTile = ({ title, logo, teams, _id, onDelete }) => {
         </div>
       </div>
 
-      {/* Confirmation Box */}
       {showConfirm && (
-        <div className="absolute inset-0 bg-white rounded-2xl flex flex-col items-center justify-center shadow-lg">
-          <p className="text-gray-800 font-medium">Delete "{title}"?</p>
+        <div className="absolute inset-0 bg-white rounded-2xl flex flex-col items-center justify-center shadow-lg ring-1 ring-black">
+          <p className="font-medium text-black">Delete "{title}"?</p>
           <div className="flex gap-3 mt-3">
             <button
               onClick={handleConfirm}
-              className="px-3 py-1 bg-red-500 rounded-lg hover:bg-red-600"
+              className="border border-black bg-gray-100 text-black px-3 py-1 rounded-lg hover:bg-gray-200 transition"
             >
               Yes
             </button>
             <button
               onClick={handleCancel}
-              className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+              className="border border-black bg-gray-100 text-black px-3 py-1 rounded-lg hover:bg-gray-200 transition"
             >
               No
             </button>
