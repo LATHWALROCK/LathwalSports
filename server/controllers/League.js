@@ -27,32 +27,35 @@ exports.createLeague = async (req, res) => {
     );
     const leagueImageUrl = leagueUpload.secure_url;
 
-    // handle teams from req.body
+    // handle teams from req.body (optional - can be empty)
     const teams = [];
     const teamKeys = Object.keys(req.body).filter((key) =>
       key.startsWith("teams[")
     );
 
-    // extract unique indexes
-    const indexes = [
-      ...new Set(teamKeys.map((k) => k.match(/teams\[(\d+)\]/)[1])),
-    ];
+    // Only process teams if team keys exist
+    if (teamKeys.length > 0) {
+      // extract unique indexes
+      const indexes = [
+        ...new Set(teamKeys.map((k) => k.match(/teams\[(\d+)\]/)[1])),
+      ];
 
-    for (let idx of indexes) {
-      const teamId = req.body[`teams[${idx}][team]`];
-      const position = req.body[`teams[${idx}][position]`];
+      for (let idx of indexes) {
+        const teamId = req.body[`teams[${idx}][team]`];
+        const position = req.body[`teams[${idx}][position]`];
 
-      if (!teamId) {
-        return res.status(400).json({
-          success: false,
-          message: `Missing team reference at index ${idx}`,
+        if (!teamId) {
+          return res.status(400).json({
+            success: false,
+            message: `Missing team reference at index ${idx}`,
+          });
+        }
+
+        teams.push({
+          team: teamId,
+          position: position ? Number(position) : idx + 1,
         });
       }
-
-      teams.push({
-        team: teamId,
-        position: position ? Number(position) : idx + 1,
-      });
     }
 
     // save league
@@ -148,32 +151,35 @@ exports.updateLeague = async (req, res) => {
       });
     }
 
-    // Handle teams from req.body
+    // Handle teams from req.body (optional - can be empty)
     const teams = [];
     const teamKeys = Object.keys(req.body).filter((key) =>
       key.startsWith("teams[")
     );
 
-    // Extract unique indexes
-    const indexes = [
-      ...new Set(teamKeys.map((k) => k.match(/teams\[(\d+)\]/)[1])),
-    ];
+    // Only process teams if team keys exist
+    if (teamKeys.length > 0) {
+      // Extract unique indexes
+      const indexes = [
+        ...new Set(teamKeys.map((k) => k.match(/teams\[(\d+)\]/)[1])),
+      ];
 
-    for (let idx of indexes) {
-      const teamId = req.body[`teams[${idx}][team]`];
-      const position = req.body[`teams[${idx}][position]`];
+      for (let idx of indexes) {
+        const teamId = req.body[`teams[${idx}][team]`];
+        const position = req.body[`teams[${idx}][position]`];
 
-      if (!teamId) {
-        return res.status(400).json({
-          success: false,
-          message: `Missing team reference at index ${idx}`,
+        if (!teamId) {
+          return res.status(400).json({
+            success: false,
+            message: `Missing team reference at index ${idx}`,
+          });
+        }
+
+        teams.push({
+          team: teamId,
+          position: position ? Number(position) : idx + 1,
         });
       }
-
-      teams.push({
-        team: teamId,
-        position: position ? Number(position) : idx + 1,
-      });
     }
 
     // Prepare update data

@@ -95,9 +95,13 @@ function League() {
   }, [sport, tournament]);
 
   const handleNumTeamsChange = (e) => {
-    const n = parseInt(e.target.value, 10);
+    const n = parseInt(e.target.value, 10) || 0;
     setNumTeams(n);
-    setTeams(Array.from({ length: n }, () => ({ teamId: "", position: "" })));
+    if (n > 0) {
+      setTeams(Array.from({ length: n }, () => ({ teamId: "", position: "" })));
+    } else {
+      setTeams([]);
+    }
   };
 
   const handleTeamChange = (index, value) => {
@@ -119,25 +123,27 @@ function League() {
       formDataObj.append("tournament", tournament);
       formDataObj.append("image", leagueLogo);
 
-      // ✅ Handle positions based on jointWinner
-      if (jointWinner && teams.length >= 2) {
-        // First two teams are joint winners
-        formDataObj.append(`teams[0][team]`, teams[0].teamId);
-        formDataObj.append(`teams[0][position]`, 1);
-        formDataObj.append(`teams[1][team]`, teams[1].teamId);
-        formDataObj.append(`teams[1][position]`, 1);
+      // ✅ Handle positions based on jointWinner (only if teams are selected)
+      if (teams.length > 0) {
+        if (jointWinner && teams.length >= 2) {
+          // First two teams are joint winners
+          formDataObj.append(`teams[0][team]`, teams[0].teamId);
+          formDataObj.append(`teams[0][position]`, 1);
+          formDataObj.append(`teams[1][team]`, teams[1].teamId);
+          formDataObj.append(`teams[1][position]`, 1);
 
-        // Rest start from position 3
-        for (let i = 2; i < teams.length; i++) {
-          formDataObj.append(`teams[${i}][team]`, teams[i].teamId);
-          formDataObj.append(`teams[${i}][position]`, i + 1); // skipping 2
+          // Rest start from position 3
+          for (let i = 2; i < teams.length; i++) {
+            formDataObj.append(`teams[${i}][team]`, teams[i].teamId);
+            formDataObj.append(`teams[${i}][position]`, i + 1); // skipping 2
+          }
+        } else {
+          // Normal case (no joint winners)
+          teams.forEach((team, idx) => {
+            formDataObj.append(`teams[${idx}][team]`, team.teamId);
+            formDataObj.append(`teams[${idx}][position]`, idx + 1);
+          });
         }
-      } else {
-        // Normal case (no joint winners)
-        teams.forEach((team, idx) => {
-          formDataObj.append(`teams[${idx}][team]`, team.teamId);
-          formDataObj.append(`teams[${idx}][position]`, idx + 1);
-        });
       }
 
       const response = await apiConnector("POST", CREATE_LEAGUE, formDataObj, {
@@ -199,10 +205,12 @@ function League() {
   };
 
   const handleEditNumTeamsChange = (e) => {
-    const n = parseInt(e.target.value, 10);
+    const n = parseInt(e.target.value, 10) || 0;
     setEditNumTeams(n);
     // If we have existing teams, preserve them; otherwise create new array
-    if (editTeams.length === 0) {
+    if (n === 0) {
+      setEditTeams([]);
+    } else if (editTeams.length === 0) {
       setEditTeams(Array.from({ length: n }, () => ({ teamId: "", position: "" })));
     } else {
       // Adjust array length while preserving existing data
@@ -250,22 +258,24 @@ function League() {
         formDataObj.append("image", editLeagueLogo);
       }
 
-      // Handle positions based on jointWinner
-      if (editJointWinner && editTeams.length >= 2) {
-        formDataObj.append(`teams[0][team]`, editTeams[0].teamId);
-        formDataObj.append(`teams[0][position]`, 1);
-        formDataObj.append(`teams[1][team]`, editTeams[1].teamId);
-        formDataObj.append(`teams[1][position]`, 1);
+      // Handle positions based on jointWinner (only if teams are selected)
+      if (editTeams.length > 0) {
+        if (editJointWinner && editTeams.length >= 2) {
+          formDataObj.append(`teams[0][team]`, editTeams[0].teamId);
+          formDataObj.append(`teams[0][position]`, 1);
+          formDataObj.append(`teams[1][team]`, editTeams[1].teamId);
+          formDataObj.append(`teams[1][position]`, 1);
 
-        for (let i = 2; i < editTeams.length; i++) {
-          formDataObj.append(`teams[${i}][team]`, editTeams[i].teamId);
-          formDataObj.append(`teams[${i}][position]`, i + 1);
+          for (let i = 2; i < editTeams.length; i++) {
+            formDataObj.append(`teams[${i}][team]`, editTeams[i].teamId);
+            formDataObj.append(`teams[${i}][position]`, i + 1);
+          }
+        } else {
+          editTeams.forEach((team, idx) => {
+            formDataObj.append(`teams[${idx}][team]`, team.teamId);
+            formDataObj.append(`teams[${idx}][position]`, idx + 1);
+          });
         }
-      } else {
-        editTeams.forEach((team, idx) => {
-          formDataObj.append(`teams[${idx}][team]`, team.teamId);
-          formDataObj.append(`teams[${idx}][position]`, idx + 1);
-        });
       }
 
       const response = await apiConnector("PUT", UPDATE_LEAGUE, formDataObj, {
@@ -398,27 +408,28 @@ function League() {
 
                     <input
                       type="number"
-                      min="1"
+                      min="0"
                       value={numTeams}
                       onChange={handleNumTeamsChange}
-                      placeholder="Number of Teams"
+                      placeholder="Number of Teams (0 for no teams)"
                       className="w-full border border-black bg-white text-black placeholder:text-gray-500 rounded-lg p-2"
-                      required
                     />
 
-                    {/* ✅ Joint Winner Checkbox */}
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="jointWinner"
-                        checked={jointWinner}
-                        onChange={(e) => setJointWinner(e.target.checked)}
-                        className="w-4 h-4"
-                      />
-                      <label htmlFor="jointWinner" className="">
-                        Joint Winner (Top 2 teams share position 1)
-                      </label>
-                    </div>
+                    {/* ✅ Joint Winner Checkbox - only show if numTeams > 0 */}
+                    {numTeams > 0 && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="jointWinner"
+                          checked={jointWinner}
+                          onChange={(e) => setJointWinner(e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                        <label htmlFor="jointWinner" className="">
+                          Joint Winner (Top 2 teams share position 1)
+                        </label>
+                      </div>
+                    )}
                   </div>
 
                   {/* Right side (Image Upload + Preview) */}
@@ -460,10 +471,12 @@ function League() {
                         Team {idx + 1}
                       </h3>
                       <Select
-                        options={teamData.map((team) => ({
-                          value: team._id,
-                          label: team.name,
-                        }))}
+                        options={teamData
+                          .filter((team) => !team.inactive)
+                          .map((team) => ({
+                            value: team._id,
+                            label: team.name,
+                          }))}
                         onChange={(selected) =>
                           handleTeamChange(idx, selected ? selected.value : "")
                         }
@@ -576,27 +589,28 @@ function League() {
 
                     <input
                       type="number"
-                      min="1"
+                      min="0"
                       value={editNumTeams}
                       onChange={handleEditNumTeamsChange}
-                      placeholder="Number of Teams"
+                      placeholder="Number of Teams (0 for no teams)"
                       className="w-full border border-black bg-white text-black placeholder:text-gray-500 rounded-lg p-2"
-                      required
                     />
 
-                    {/* Joint Winner Checkbox */}
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="editJointWinner"
-                        checked={editJointWinner}
-                        onChange={(e) => setEditJointWinner(e.target.checked)}
-                        className="w-4 h-4"
-                      />
-                      <label htmlFor="editJointWinner" className="">
-                        Joint Winner (Top 2 teams share position 1)
-                      </label>
-                    </div>
+                    {/* Joint Winner Checkbox - only show if editNumTeams > 0 */}
+                    {editNumTeams > 0 && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="editJointWinner"
+                          checked={editJointWinner}
+                          onChange={(e) => setEditJointWinner(e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                        <label htmlFor="editJointWinner" className="">
+                          Joint Winner (Top 2 teams share position 1)
+                        </label>
+                      </div>
+                    )}
                   </div>
 
                   {/* Right side (Image Upload + Preview) */}
@@ -638,10 +652,12 @@ function League() {
                         Team {idx + 1}
                       </h3>
                       <Select
-                        options={teamData.map((team) => ({
-                          value: team._id,
-                          label: team.name,
-                        }))}
+                        options={teamData
+                          .filter((team) => !team.inactive)
+                          .map((team) => ({
+                            value: team._id,
+                            label: team.name,
+                          }))}
                         value={editTeams[idx]?.teamId ? {
                           value: editTeams[idx].teamId,
                           label: teamData.find(t => t._id === editTeams[idx].teamId)?.name || ""

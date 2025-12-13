@@ -23,6 +23,7 @@ function Team() {
     sport: "",
     type: "",
     tournament: "",
+    inactive: false,
   });
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -37,13 +38,14 @@ function Team() {
     sport: "",
     type: "",
     tournament: "",
+    inactive: false,
   });
   const [showEditForm, setShowEditForm] = useState(false);
   const [editImage, setEditImage] = useState(null);
   const [editPreview, setEditPreview] = useState(null);
 
 
-  const { name, city, country, sport, type, tournament } = formData;
+  const { name, city, country, sport, type, tournament, inactive } = formData;
 
   // Fetch all teams
   const fetchData = () => {
@@ -109,11 +111,11 @@ function Team() {
 
   // Form field change handler
   const handleOnChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type: inputType, checked } = e.target;
 
     setFormData((prevData) => ({
       ...prevData,
-      [name]: value,
+      [name]: inputType === "checkbox" ? checked : value,
     }));
 
     if (name === "sport") {
@@ -211,6 +213,7 @@ function Team() {
     if (type === "League") {
       formDataObj.append("tournament", tournament.trim());
     }
+    formDataObj.append("inactive", inactive);
     formDataObj.append("image", image);
 
     apiConnector("POST", CREATE_TEAM, formDataObj, {
@@ -222,7 +225,7 @@ function Team() {
         }
         toast.success("Team created successfully");
         // Reset form
-        setFormData({ name: "", city: "", country: "", sport: "", type: "", tournament: "" });
+        setFormData({ name: "", city: "", country: "", sport: "", type: "", tournament: "", inactive: false });
         setImage(null);
         setPreview(null);
         setTeamType("");
@@ -270,6 +273,7 @@ function Team() {
       sport: teamData.sport?._id || "",
       type: teamData.type || "",
       tournament: teamData.tournament?._id || "",
+      inactive: teamData.inactive || false,
     });
     setEditPreview(teamData.imageUrl || null);
     setShowEditForm(true);
@@ -282,11 +286,11 @@ function Team() {
 
   // Handle edit form field changes
   const handleEditOnChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type: inputType, checked } = e.target;
 
     setEditData((prevData) => ({
       ...prevData,
-      [name]: value,
+      [name]: inputType === "checkbox" ? checked : value,
     }));
 
     if (name === "sport") {
@@ -358,6 +362,7 @@ function Team() {
     if (editData.type === "League") {
       formDataObj.append("tournament", editData.tournament.trim());
     }
+    formDataObj.append("inactive", editData.inactive);
     if (editImage) {
       formDataObj.append("image", editImage);
     }
@@ -379,6 +384,7 @@ function Team() {
           sport: "",
           type: "",
           tournament: "",
+          inactive: false,
         });
         setEditImage(null);
         setEditPreview(null);
@@ -570,6 +576,7 @@ function Team() {
                         sport: "",
                         type: "",
                         tournament: "",
+                        inactive: false,
                       });
                       setImage(null);
                       setPreview(null);
@@ -674,6 +681,22 @@ function Team() {
                 )}
 
                 <input type="hidden" name="type" value={type} />
+                
+                {/* Inactive Checkbox */}
+                <div className="w-full flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="inactive"
+                    id="inactive"
+                    checked={inactive}
+                    onChange={handleOnChange}
+                    className="w-5 h-5 border border-black rounded cursor-pointer"
+                  />
+                  <label htmlFor="inactive" className="text-black cursor-pointer">
+                    Inactive
+                  </label>
+                </div>
+
                 <label
                   htmlFor="imageUpload"
                   className="w-40 h-40 border-2 border-dashed border-black rounded-xl flex items-center justify-center 
@@ -846,6 +869,21 @@ function Team() {
 
                 <input type="hidden" name="type" value={editData.type} />
 
+                {/* Inactive Checkbox */}
+                <div className="w-full flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="inactive"
+                    id="editInactive"
+                    checked={editData.inactive || false}
+                    onChange={handleEditOnChange}
+                    className="w-5 h-5 border border-black rounded cursor-pointer"
+                  />
+                  <label htmlFor="editInactive" className="text-black cursor-pointer">
+                    Inactive
+                  </label>
+                </div>
+
                 <label
                   htmlFor="editImageUpload"
                   className="w-40 h-40 border-2 border-dashed border-black rounded-xl flex items-center justify-center
@@ -890,6 +928,7 @@ function Team() {
                         sport: "",
                         type: "",
                         tournament: "",
+                        inactive: false,
                       });
                       setEditImage(null);
                       setEditPreview(null);

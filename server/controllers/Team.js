@@ -3,7 +3,7 @@ const cloudinary = require("cloudinary").v2;
 
 exports.createTeam = async (req, res) => {
     try {
-        const { name, city, country, sport, type, tournament } = req.body;
+        const { name, city, country, sport, type, tournament, inactive } = req.body;
         const file = req.files?.image;
         if (!file) {
             return res.status(400).json({
@@ -71,7 +71,8 @@ exports.createTeam = async (req, res) => {
             imageUrl,
             sport: cleanSport,
             type: cleanType,
-            tournament: cleanType === "League" ? cleanTournament : undefined
+            tournament: cleanType === "League" ? cleanTournament : undefined,
+            inactive: inactive === "true" || inactive === true
         });
         return res.status(200).json({
             success: true,
@@ -188,7 +189,7 @@ exports.deleteTeam = async (req, res) => {
 
 exports.updateTeam = async (req, res) => {
     try {
-        const { _id, name, city, country, sport, type, tournament } = req.body;
+        const { _id, name, city, country, sport, type, tournament, inactive } = req.body;
         const file = req.files?.image;
 
         if (!_id || !name || !sport || !type) {
@@ -249,6 +250,7 @@ exports.updateTeam = async (req, res) => {
             name: cleanName,
             sport: cleanSport,
             type: cleanType,
+            inactive: inactive === "true" || inactive === true
         };
 
         if (cleanType === "League") {

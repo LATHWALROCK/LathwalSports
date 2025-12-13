@@ -36,6 +36,10 @@ const teamSchema = new mongoose.Schema(
       ref: "tournament",
       required: false,
     },
+    inactive: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 )

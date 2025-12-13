@@ -4,6 +4,7 @@ import { Trash2, Edit } from "lucide-react";
 const Team = ({ title, image, _id, onDelete, onEdit, teamData }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const isInactive = teamData?.inactive || false;
 
   const handleDeleteClick = (e) => {
     e.stopPropagation();
@@ -56,9 +57,10 @@ const Team = ({ title, image, _id, onDelete, onEdit, teamData }) => {
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          className="bg-gray-100 shadow-md rounded-2xl p-4 flex flex-col items-center
+          className={`bg-gray-100 shadow-md rounded-2xl p-4 flex flex-col items-center
                  justify-between text-lg font-semibold text-black hover:bg-gray-200
-                 hover:scale-105 transition-all duration-300 cursor-pointer h-56 w-full"
+                 hover:scale-105 transition-all duration-300 cursor-pointer h-56 w-full
+                 ${isInactive ? 'opacity-50 grayscale' : ''}`}
         >
           <div className="w-full h-36 flex items-center justify-center p-1 bg-white rounded-lg">
             <img
