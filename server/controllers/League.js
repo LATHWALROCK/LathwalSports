@@ -227,3 +227,37 @@ exports.updateLeague = async (req, res) => {
     });
   }
 };
+
+exports.getLeagueByTeam = async (req, res) => {
+  try {
+    const { teamId } = req.query;
+    if (!teamId) {
+      return res.status(400).json({
+        success: false,
+        message: "Team ID is required",
+      });
+    }
+
+    // Find all leagues where the team participated
+    const leagues = await League.find({
+      "teams.team": teamId
+    })
+      .populate("teams.team")
+      .populate("sport")
+      .populate("tournament")
+      .sort({ year: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: leagues,
+      message: "Leagues fetched successfully",
+    });
+  } catch (err) {
+    console.error("GET LEAGUE BY TEAM ERROR:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      message: "Server error",
+    });
+  }
+};

@@ -5,6 +5,7 @@ import Tournament from "./pages/Tournament"
 import League from "./pages/League"
 import Navbar from "./components/Navbar"
 import Team from "./pages/Team"
+import TeamDetail from "./pages/TeamDetail"
 
 function App() {
 
@@ -18,6 +19,7 @@ function App() {
           <Route path="/tournament" element={<Tournament />} />
           <Route path="/leagues" element={<League />} />
           <Route path="/teams" element={<Team />} />
+          <Route path="/team/:id" element={<TeamDetail />} />
         </Routes>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { Trash2, Edit } from "lucide-react";
 
 const Team = ({ title, image, _id, onDelete, onEdit, teamData }) => {
@@ -54,24 +55,26 @@ const Team = ({ title, image, _id, onDelete, onEdit, teamData }) => {
         </div>
       )}
 
-        <div
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-          className={`bg-gray-100 shadow-md rounded-2xl p-4 flex flex-col items-center
-                 justify-between text-lg font-semibold text-black hover:bg-gray-200
-                 hover:scale-105 transition-all duration-300 cursor-pointer h-56 w-full
-                 ${isInactive ? 'opacity-50 grayscale' : ''}`}
-        >
-          <div className="w-full h-36 flex items-center justify-center p-1 bg-white rounded-lg">
-            <img
-              src={image}
-              alt={title}
-              className="max-h-full max-w-full object-contain"
-            />
-          </div>
+        <Link to={`/team/${_id}`}>
+          <div
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            className={`bg-gray-100 shadow-md rounded-2xl p-4 flex flex-col items-center
+                   justify-between text-lg font-semibold text-black hover:bg-gray-200
+                   hover:scale-105 transition-all duration-300 cursor-pointer h-56 w-full
+                   ${isInactive ? 'opacity-50 grayscale' : ''}`}
+          >
+            <div className="w-full h-36 flex items-center justify-center p-1 bg-white rounded-lg">
+              <img
+                src={image}
+                alt={title}
+                className="max-h-full max-w-full object-contain"
+              />
+            </div>
 
-          <p className="text-center mt-1">{title}</p>
-        </div>
+            <p className="text-center mt-1">{title}</p>
+          </div>
+        </Link>
 
       {showConfirm && (
         <div className="absolute inset-0 bg-white rounded-2xl flex flex-col items-center justify-center shadow-lg ring-1 ring-black">

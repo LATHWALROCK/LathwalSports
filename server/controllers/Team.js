@@ -293,3 +293,99 @@ exports.updateTeam = async (req, res) => {
         });
     }
 }
+
+exports.getTeamById = async (req, res) => {
+    try {
+        const { _id } = req.query;
+        if (!_id) {
+            return res.status(400).json({
+                success: false,
+                message: "Team ID is required",
+            });
+        }
+
+        const team = await Team.findById(_id)
+            .populate("sport")
+            .populate("tournament");
+
+        if (!team) {
+            return res.status(404).json({
+                success: false,
+                message: "Team not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: team,
+            message: "Team data fetched successfully",
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            message: "Server error",
+        });
+    }
+};
+
+exports.getTeamsByCityAndSport = async (req, res) => {
+    try {
+        const { city, sport } = req.query;
+        if (!city || !sport) {
+            return res.status(400).json({
+                success: false,
+                message: "City and sport are required",
+            });
+        }
+
+        const teams = await Team.find({ city, sport, type: "League" })
+            .populate("sport")
+            .populate("tournament")
+            .sort({ name: 1 });
+
+        res.status(200).json({
+            success: true,
+            data: teams,
+            message: "Teams fetched successfully",
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            message: "Server error",
+        });
+    }
+};
+
+exports.getTeamsByCountryAndSport = async (req, res) => {
+    try {
+        const { country, sport } = req.query;
+        if (!country || !sport) {
+            return res.status(400).json({
+                success: false,
+                message: "Country and sport are required",
+            });
+        }
+
+        const teams = await Team.find({ country, sport, type: "National" })
+            .populate("sport")
+            .populate("tournament")
+            .sort({ name: 1 });
+
+        res.status(200).json({
+            success: true,
+            data: teams,
+            message: "Teams fetched successfully",
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            message: "Server error",
+        });
+    }
+};
