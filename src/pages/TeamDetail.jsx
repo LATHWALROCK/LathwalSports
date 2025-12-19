@@ -26,13 +26,15 @@ function TeamDetail() {
   const fetchTeamData = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Fetch team by ID
       const teamResponse = await apiConnector("GET", GET_TEAM_BY_ID, null, null, { _id: id });
       const teamData = teamResponse.data.data;
       setTeam(teamData);
 
-      // Fetch related teams based on type
+      let relatedTeamsData = [];
+
+      // Fetch related teams based on type (all teams from same city/country and sport)
       if (teamData.type === "League" && teamData.city && teamData.sport?._id) {
         const relatedResponse = await apiConnector(
           "GET",
@@ -41,8 +43,8 @@ function TeamDetail() {
           null,
           { city: teamData.city, sport: teamData.sport._id }
         );
-        // Filter out the current team
-        setRelatedTeams(relatedResponse.data.data.filter(t => t._id !== id));
+        relatedTeamsData = relatedResponse.data.data;
+        setRelatedTeams(relatedTeamsData);
       } else if (teamData.type === "National" && teamData.country && teamData.sport?._id) {
         const relatedResponse = await apiConnector(
           "GET",
@@ -51,40 +53,43 @@ function TeamDetail() {
           null,
           { country: teamData.country, sport: teamData.sport._id }
         );
-        // Filter out the current team
-        setRelatedTeams(relatedResponse.data.data.filter(t => t._id !== id));
+        relatedTeamsData = relatedResponse.data.data;
+        setRelatedTeams(relatedTeamsData);
       }
 
-      // Fetch leagues where this team participated
-      const leaguesResponse = await apiConnector(
-        "GET",
-        GET_LEAGUE_BY_TEAM,
-        null,
-        null,
-        { teamId: id }
-      );
-      
-      const allLeagues = leaguesResponse.data.data || [];
-      
-      // Filter leagues where team won (position 1)
-      const won = allLeagues.filter(league => {
-        const teamEntry = league.teams.find(t => {
-          const teamId = t.team?._id || t.team;
-          return teamId?.toString() === id;
-        });
-        return teamEntry && teamEntry.position === 1;
-      });
-      setWonEditions(won);
+      // Fetch leagues where ALL related teams participated
+      if (relatedTeamsData.length > 0) {
+        const allTeamIds = relatedTeamsData.map(t => t._id);
+        const allLeaguesPromises = allTeamIds.map(teamId =>
+          apiConnector("GET", GET_LEAGUE_BY_TEAM, null, null, { teamId })
+        );
 
-      // Filter leagues where team was runner-up (position 2)
-      const runnerUp = allLeagues.filter(league => {
-        const teamEntry = league.teams.find(t => {
-          const teamId = t.team?._id || t.team;
-          return teamId?.toString() === id;
+        const leaguesResponses = await Promise.all(allLeaguesPromises);
+        const allLeagues = leaguesResponses.flatMap(response => response.data.data || []);
+
+        // Remove duplicates based on league _id
+        const uniqueLeagues = allLeagues.filter((league, index, self) =>
+          index === self.findIndex(l => l._id === league._id)
+        );
+
+        // Filter leagues where any of the related teams won (position 1)
+        const won = uniqueLeagues.filter(league => {
+          return league.teams.some(teamEntry => {
+            const teamId = teamEntry.team?._id || teamEntry.team;
+            return allTeamIds.includes(teamId?.toString()) && teamEntry.position === 1;
+          });
         });
-        return teamEntry && teamEntry.position === 2;
-      });
-      setRunnerUpEditions(runnerUp);
+        setWonEditions(won);
+
+        // Filter leagues where any of the related teams was runner-up (position 2)
+        const runnerUp = uniqueLeagues.filter(league => {
+          return league.teams.some(teamEntry => {
+            const teamId = teamEntry.team?._id || teamEntry.team;
+            return allTeamIds.includes(teamId?.toString()) && teamEntry.position === 2;
+          });
+        });
+        setRunnerUpEditions(runnerUp);
+      }
 
     } catch (error) {
       console.error("FETCH TEAM DETAIL ERROR:", error);
@@ -130,49 +135,34 @@ function TeamDetail() {
   return (
     <div className="bg-gradient-to-b from-white to-gray-50 text-black py-10 px-4">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-5xl font-bold text-center mb-8">{team.name}</h1>
+        {/* Get latest active team name */}
+        {(() => {
+          const activeTeams = relatedTeams.filter(t => !t.inactive);
+          const latestActive = activeTeams.length > 0 ? activeTeams[0] : team; // fallback to current team
+          return <h1 className="text-5xl font-bold text-center mb-8">{latestActive.name}</h1>;
+        })()}
 
-        {/* Section 1: Team Logo and Related Teams */}
-        <div className="mb-12">
-          <div className="bg-gray-100 rounded-2xl p-8 flex justify-center mb-8">
-            <img
-              src={team.imageUrl}
-              alt={team.name}
-              className="max-h-64 max-w-full object-contain"
-            />
-          </div>
-
-          {/* Related Teams */}
-          {relatedTeams.length > 0 && (
-            <div className="mt-8">
-              <h3 className="text-xl font-semibold mb-4">
-                {team.type === "League" 
-                  ? `Other Teams from ${team.city}` 
-                  : `Other Teams from ${team.country}`}
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {relatedTeams.map((relatedTeam) => (
-                  <div
-                    key={relatedTeam._id}
-                    onClick={() => navigate(`/team/${relatedTeam._id}`)}
-                    className="bg-gray-100 shadow-md rounded-2xl p-4 flex flex-col items-center
-                             justify-between text-lg font-semibold text-black hover:bg-gray-200
-                             hover:scale-105 transition-all duration-300 cursor-pointer h-48"
-                  >
-                    <div className="w-full h-32 flex items-center justify-center p-1 bg-white rounded-lg">
-                      <img
-                        src={relatedTeam.imageUrl}
-                        alt={relatedTeam.name}
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    </div>
-                    <p className="text-center mt-1 text-sm">{relatedTeam.name}</p>
-                  </div>
-                ))}
+        {/* Section 1: All Team Logos (versions) side by side */}
+        {relatedTeams.length > 0 && (
+          <div className="mb-12">
+            <div className="bg-gray-100 rounded-2xl p-8">
+              <div className="flex flex-wrap gap-8 justify-center items-center">
+              {relatedTeams.map((relatedTeam) => (
+                <div
+                  key={relatedTeam._id}
+                  className={`flex-shrink-0 ${relatedTeam.inactive ? 'opacity-50 grayscale' : ''}`}
+                >
+                  <img
+                    src={relatedTeam.imageUrl}
+                    alt={relatedTeam.name}
+                    className="h-44 w-44 object-contain"
+                  />
+                </div>
+              ))}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Section 2: Tournament Editions Won */}
         <div className="mb-12">
@@ -182,8 +172,7 @@ function TeamDetail() {
               {wonEditions.map((league) => (
                 <div
                   key={league._id}
-                  className="bg-gray-100 shadow-md rounded-2xl p-4 flex flex-col items-center
-                           justify-between hover:bg-gray-200 hover:scale-105 transition-all duration-300"
+                  className="bg-gray-100 shadow-md rounded-2xl p-4 flex flex-col items-center justify-between hover:bg-gray-200 hover:scale-105 transition-all duration-300"
                 >
                   <div className="w-full h-32 flex items-center justify-center p-1 bg-white rounded-lg mb-2">
                     <img
@@ -210,8 +199,7 @@ function TeamDetail() {
               {runnerUpEditions.map((league) => (
                 <div
                   key={league._id}
-                  className="bg-gray-100 shadow-md rounded-2xl p-4 flex flex-col items-center
-                           justify-between hover:bg-gray-200 hover:scale-105 transition-all duration-300"
+                  className="bg-gray-100 shadow-md rounded-2xl p-4 flex flex-col items-center justify-between hover:bg-gray-200 hover:scale-105 transition-all duration-300"
                 >
                   <div className="w-full h-32 flex items-center justify-center p-1 bg-white rounded-lg mb-2">
                     <img
