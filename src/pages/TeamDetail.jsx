@@ -6,6 +6,7 @@ import {
   teamEndpoints,
   leagueEndpoints,
 } from "../services/apis";
+import { ArrowLeft } from "lucide-react";
 
 const {
   GET_TEAM_BY_ID,
@@ -118,22 +119,35 @@ function TeamDetail() {
 
   if (!team) {
     return (
-      <div className="bg-gradient-to-b from-white to-gray-50 text-black py-10 px-4">
+      <div className="bg-gradient-to-b from-white to-gray-50 text-black py-10 px-4 relative">
+        {/* Back Button - Top Left Corner */}
+        <button
+          onClick={() => navigate(-1)}
+          className="absolute top-6 left-6 bg-gray-100 shadow-md rounded-lg px-4 py-2 text-black font-medium
+                     hover:bg-gray-200 transition-colors duration-300 z-10"
+        >
+          ← Back
+        </button>
+
         <div className="max-w-6xl mx-auto text-center">
           <p>Team not found</p>
-          <button
-            onClick={() => navigate("/teams")}
-            className="mt-4 border border-black bg-gray-100 text-black px-4 py-2 rounded-lg hover:bg-gray-200 transition"
-          >
-            Back to Teams
-          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gradient-to-b from-white to-gray-50 text-black py-10 px-4">
+    <div className="bg-gradient-to-b from-white to-gray-50 text-black py-10 px-4 relative">
+      {/* Back Button - Top Left Corner */}
+      <button
+        onClick={() => navigate(-1)}
+        className="fixed top-20 left-6 bg-gray-100 shadow-md rounded-lg p-3 text-black
+                   hover:bg-gray-200 transition-colors duration-300 z-10"
+        title="Back"
+      >
+        <ArrowLeft size={24} />
+      </button>
+
       <div className="max-w-6xl mx-auto">
         {/* Get latest active team name */}
         {(() => {

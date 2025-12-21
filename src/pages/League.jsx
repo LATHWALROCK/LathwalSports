@@ -3,18 +3,21 @@ import { toast } from "react-hot-toast";
 import { apiConnector } from "../services/apiConnector";
 import { leagueEndpoints, teamEndpoints, tournamentEndpoints, sportEndpoints } from "../services/apis";
 import IndividualLeague from "../components/LeagueTile";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import Select from "react-select";
+import { ArrowLeft } from "lucide-react";
 
-const { GET_TEAM_BY_SPORT, GET_TEAM_BY_SPORT_AND_TOURNAMENT } = teamEndpoints;
+const { GET_TEAM_BY_SPORT_AND_TOURNAMENT } = teamEndpoints; // eslint-disable-line no-undef
 const { GET_LEAGUE, CREATE_LEAGUE, UPDATE_LEAGUE, DELETE_LEAGUE } = leagueEndpoints;
 const { GET_TOURNAMENT_BY_TOURNAMENT_ID } = tournamentEndpoints;
 const { GET_SPORT } = sportEndpoints;
 
 function League() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const tournament = searchParams.get("tournament");
   const sport = searchParams.get("sport");
+  const type = searchParams.get("type");
 
   const [data, setData] = useState([]);
   const [teamData, setTeamData] = useState([]);
@@ -42,14 +45,15 @@ function League() {
   const [editJointWinner, setEditJointWinner] = useState(false);
   const [editLeagueId, setEditLeagueId] = useState("");
 
+
   // Fetch teams
   const fetchTeamData = useCallback(async () => {
     try {
       // For international tournaments, get national teams by sport
       // For league tournaments, get league teams by sport and tournament
       const endpoint = tournamentData[0]?.type === "International"
-        ? GET_TEAM_BY_SPORT
-        : GET_TEAM_BY_SPORT_AND_TOURNAMENT;
+        ? GET_TEAM_BY_SPORT // eslint-disable-line no-undef
+        : GET_TEAM_BY_SPORT_AND_TOURNAMENT; // eslint-disable-line no-undef
 
       const queryParams = tournamentData[0]?.type === "International"
         ? { sport }
@@ -93,6 +97,7 @@ function League() {
       console.error("FETCH LEAGUE ERROR:", error);
     }
   }, [sport, tournament]);
+
 
   const handleNumTeamsChange = (e) => {
     const n = parseInt(e.target.value, 10) || 0;
@@ -330,7 +335,17 @@ function League() {
   }, [tournamentData, fetchTeamData]);
 
   return (
-    <div className="bg-gradient-to-b from-white to-gray-50 text-black py-10 px-4">
+    <div className="bg-gradient-to-b from-white to-gray-50 text-black py-10 px-4 relative">
+      {/* Back Button - Top Left Corner */}
+      <button
+        onClick={() => navigate(`/tournament?sport=${sport}&type=${type}&tournament=${tournament}`)}
+        className="fixed top-20 left-6 bg-gray-100 shadow-md rounded-lg p-3 text-black
+                   hover:bg-gray-200 transition-colors duration-300 z-10"
+        title="Back to Tournament"
+      >
+        <ArrowLeft size={24} />
+      </button>
+
       <div className="max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-8">
           {tournamentData[0]?.name}
@@ -351,18 +366,19 @@ function League() {
               />
             </li>
           ))}
+          {/* Add League Tile */}
+          <li>
+            <div
+              onClick={() => setShowForm(true)}
+              className="bg-gray-100 shadow-md rounded-2xl p-6 flex items-center justify-center
+                         text-6xl font-bold text-gray-400 hover:bg-gray-200 hover:text-gray-600
+                         hover:scale-105 transition-all duration-300 cursor-pointer h-full min-h-[120px]"
+              title="Add League Edition"
+            >
+              +
+            </div>
+          </li>
         </ul>
-
-        {/* Add Edition button */}
-        <button
-          onClick={() => setShowForm(true)}
-          disabled={loading}
-          className="w-full bg-gray-100 shadow-md rounded-2xl p-6 flex items-center justify-center
-             text-2xl font-bold text-black hover:bg-gray-200 hover:scale-[1.02]
-             transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          + Add {getEditionType()}
-        </button>
 
         {/* Modal Form */}
         {showForm && !loading && (

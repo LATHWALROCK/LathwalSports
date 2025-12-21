@@ -54,13 +54,13 @@ const Sport = ({ title, _id, onDelete, onEdit }) => {
         </div>
       )}
 
-      <Link to={`/tournament?sport=${_id}`}>
+      <Link to={`/tournament-selector?sport=${_id}`}>
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          className="bg-gray-100 shadow-md rounded-2xl p-6 flex items-center justify-center 
-                     text-lg font-semibold text-black hover:bg-gray-200 
-                     hover:scale-105 transition-all duration-300 cursor-pointer"
+          className="bg-gray-100 shadow-md rounded-2xl p-6 flex items-center justify-center
+                     text-lg font-semibold text-black hover:bg-gray-200
+                     hover:scale-105 transition-all duration-300 cursor-pointer min-h-[120px]"
         >
           {title}
         </div>

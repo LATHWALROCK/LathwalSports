@@ -7,6 +7,7 @@ import {
   sportEndpoints,
   tournamentEndpoints,
 } from "../services/apis";
+import { Plus } from "lucide-react";
 
 const { GET_TEAM, CREATE_TEAM, UPDATE_TEAM, DELETE_TEAM } = teamEndpoints;
 const { GET_SPORT } = sportEndpoints;
@@ -490,6 +491,18 @@ function Team() {
                               />
                             </li>
                           ))}
+                          {/* Add Team Tile */}
+                          <li>
+                            <div
+                              onClick={() => setShowForm(true)}
+                              className="bg-gray-100 shadow-md rounded-2xl p-6 flex items-center justify-center
+                                         text-6xl font-bold text-gray-400 hover:bg-gray-200 hover:text-gray-600
+                                         hover:scale-105 transition-all duration-300 cursor-pointer h-full min-h-[120px]"
+                              title="Add Team"
+                            >
+                              +
+                            </div>
+                          </li>
                         </ul>
                       </div>
                     )}
@@ -520,17 +533,7 @@ function Team() {
                   </div>
               </div>
             );
-          })}
-
-        {/* Single Add Team Button */}
-        <button
-          onClick={handleOpenTypeSelection}
-          className="w-full bg-gray-100 shadow-md rounded-2xl p-6 flex items-center justify-center
-          text-xl font-bold text-black hover:bg-gray-200 hover:scale-[1.02]
-          transition-all duration-300 cursor-pointer"
-        >
-          + Add Team
-        </button>
+          }        )}
 
         {/* Type Selection Modal */}
         {showTypeSelection && (

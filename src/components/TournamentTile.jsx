@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Trash2, Edit } from "lucide-react";
 
-const Tournament = ({ title, image, sport, _id, onDelete, onEdit }) => {
+const Tournament = ({ title, image, sport, _id, type, onDelete, onEdit }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [hovered, setHovered] = useState(false);
 
@@ -54,7 +54,7 @@ const Tournament = ({ title, image, sport, _id, onDelete, onEdit }) => {
         </div>
       )}
 
-      <Link to={`/leagues?sport=${sport}&tournament=${_id}`}>
+      <Link to={`/leagues?sport=${sport}&tournament=${_id}&type=${type}`}>
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}

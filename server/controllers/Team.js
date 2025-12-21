@@ -135,7 +135,7 @@ exports.getTeamBySportAndTournament = async (req, res) => {
 exports.getTeamBySport = async (req, res) => {
     try {
         const { sport } = req.query;
-        const teams = await Team.find({ sport, type: "National" })
+        const teams = await Team.find({ sport })
             .populate("sport")
             .populate("tournament")
             .sort({ name: 1 });
@@ -143,7 +143,7 @@ exports.getTeamBySport = async (req, res) => {
         res.status(200).json({
             success: true,
             data: teams,
-            message: 'National teams for sport fetched successfully'
+            message: 'Teams for sport fetched successfully'
         });
     } catch (err) {
         console.error(err);

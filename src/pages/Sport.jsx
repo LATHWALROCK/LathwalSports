@@ -130,16 +130,19 @@ function Sport() {
                 />
               </li>
             ))}
+            {/* Add Sport Tile */}
+            <li>
+              <div
+                onClick={() => setShowForm(true)}
+                className="bg-gray-100 shadow-md rounded-2xl p-6 flex items-center justify-center
+                           text-3xl font-bold text-gray-400 hover:bg-gray-200 hover:text-gray-600
+                           hover:scale-105 transition-all duration-300 cursor-pointer min-h-[120px]"
+                title="Add Sport"
+              >
+                +
+              </div>
+            </li>
           </ul>
-
-          <button
-            onClick={() => setShowForm(true)}
-            className="w-full bg-gray-100 shadow-md rounded-2xl p-6 flex items-center justify-center
-                       text-2xl font-bold text-black hover:bg-gray-200 hover:scale-[1.02]
-                       transition-all duration-300 cursor-pointer"
-          >
-            + Add Sport
-          </button>
         </div>
       </div>
 

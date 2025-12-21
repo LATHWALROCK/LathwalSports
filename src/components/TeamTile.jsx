@@ -72,7 +72,7 @@ const Team = ({ title, image, _id, onDelete, onEdit, teamData }) => {
               />
             </div>
 
-            <p className="text-center mt-1">{title}</p>
+            <p className="text-center mt-1 text-xs px-1 break-words overflow-hidden" style={{ maxHeight: '2.5rem', lineHeight: '1.25rem' }} title={title}>{title}</p>
           </div>
         </Link>
 
