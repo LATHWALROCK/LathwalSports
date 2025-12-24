@@ -122,6 +122,7 @@ exports.getTournamentBySport = async (req, res) => {
 exports.updateTournament = async (req, res) => {
     try {
         const { _id, name, sport, type } = req.body;
+        const file = req.files?.image;
 
         if (!_id || !name || !sport || !type) {
             return res.status(400).json({
@@ -130,11 +131,32 @@ exports.updateTournament = async (req, res) => {
             });
         }
 
-        const updatedTournament = await Tournament.findByIdAndUpdate(
-            _id,
-            { name: name.trim(), sport, type },
-            { new: true }
-        ).populate("sport");
+        // Handle empty strings from FormData
+        const cleanName = name && name.trim() ? name.trim() : null;
+
+        if (!cleanName) {
+            return res.status(400).json({
+                success: false,
+                message: "Tournament name is required",
+            });
+        }
+
+        // Prepare update data
+        const updateData = {
+            name: cleanName,
+            sport,
+            type
+        };
+
+        // Handle image upload if provided
+        if (file) {
+            const folder = "tournaments";
+            const options = { folder };
+            const result = await cloudinary.uploader.upload(file.tempFilePath, options);
+            updateData.imageUrl = result.secure_url;
+        }
+
+        const updatedTournament = await Tournament.findByIdAndUpdate(_id, updateData, { new: true, runValidators: true }).populate("sport");
 
         if (!updatedTournament) {
             return res.status(404).json({

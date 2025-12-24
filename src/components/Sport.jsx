@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Trash2, Edit } from "lucide-react";
 
-const Sport = ({ title, _id, onDelete, onEdit }) => {
+const Sport = ({ title, image, _id, onDelete, onEdit, sportData }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [hovered, setHovered] = useState(false);
 
@@ -28,7 +28,7 @@ const Sport = ({ title, _id, onDelete, onEdit }) => {
   const handleEditClick = (e) => {
     e.stopPropagation();
     e.preventDefault();
-    onEdit(_id, title);
+    onEdit(_id, title, sportData);
   };
 
   return (
@@ -58,16 +58,24 @@ const Sport = ({ title, _id, onDelete, onEdit }) => {
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          className="bg-gray-100 shadow-md rounded-2xl p-6 flex items-center justify-center
-                     text-lg font-semibold text-black hover:bg-gray-200
-                     hover:scale-105 transition-all duration-300 cursor-pointer min-h-[120px]"
+          className="bg-gray-100 p-4 flex flex-col items-start
+                 justify-between text-lg font-semibold text-black hover:bg-gray-200
+                 transition-all duration-300 cursor-pointer aspect-[3/2]"
         >
-          {title}
+          <div className="w-full flex-1 flex items-center justify-center p-2">
+            <img
+              src={image}
+              alt={title}
+              className="max-h-full max-w-full object-contain rounded-xl"
+            />
+          </div>
+
+          <p className="text-left text-base px-2 break-words overflow-hidden w-full" style={{ maxHeight: '3rem', lineHeight: '1.5rem', marginTop: '0px' }} title={title}>{title}</p>
         </div>
       </Link>
 
       {showConfirm && (
-        <div className="absolute inset-0 bg-white rounded-2xl flex flex-col items-center justify-center shadow-lg ring-1 ring-black">
+        <div className="absolute inset-0 bg-white flex flex-col items-center justify-center ring-1 ring-black">
           <p className="font-medium text-black">Delete "{title}"?</p>
           <div className="flex gap-3">
             <button

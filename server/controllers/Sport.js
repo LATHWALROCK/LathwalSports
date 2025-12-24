@@ -1,36 +1,50 @@
 const Sport = require("../models/Sport")
+const cloudinary = require("cloudinary").v2;
 
 exports.createSport = async (req, res) => {
     try {
-        const {
-            name
-        } = req.body
+        const { name } = req.body;
+        const file = req.files?.image;
 
-        if (
-            !name
-        ) {
-            return res.status(403).send({
+        if (!file) {
+            return res.status(400).json({
                 success: false,
-                message: "All Fields are required",
-            })
+                message: "Image file is required",
+            });
+        }
+
+        const folder = "sports";
+        const options = { folder };
+        const result = await cloudinary.uploader.upload(file.tempFilePath, options);
+        const imageUrl = result.secure_url;
+
+        // Handle empty strings from FormData
+        const cleanName = name && name.trim() ? name.trim() : null;
+
+        if (!cleanName) {
+            return res.status(403).json({
+                success: false,
+                message: "Sport name is required",
+            });
         }
 
         const sport = await Sport.create({
-            name
-        })
+            name: cleanName,
+            imageUrl
+        });
 
         return res.status(200).json({
             success: true,
             sport,
             message: "Sport created successfully",
-        })
+        });
     }
     catch (error) {
-        console.error(error)
+        console.error(error);
         return res.status(500).json({
             success: false,
             message: "Sport cannot be created. Please try again.",
-        })
+        });
     }
 }
 
@@ -62,6 +76,7 @@ exports.getSport = async (req, res) => {
 exports.updateSport = async (req, res) => {
     try {
         const { _id, name } = req.body;
+        const file = req.files?.image;
 
         if (!_id || !name) {
             return res.status(400).json({
@@ -70,11 +85,30 @@ exports.updateSport = async (req, res) => {
             });
         }
 
-        const updatedSport = await Sport.findByIdAndUpdate(
-            _id,
-            { name: name.trim() },
-            { new: true }
-        );
+        // Handle empty strings from FormData
+        const cleanName = name && name.trim() ? name.trim() : null;
+
+        if (!cleanName) {
+            return res.status(400).json({
+                success: false,
+                message: "Sport name is required",
+            });
+        }
+
+        // Prepare update data
+        const updateData = {
+            name: cleanName
+        };
+
+        // Handle image upload if provided
+        if (file) {
+            const folder = "sports";
+            const options = { folder };
+            const result = await cloudinary.uploader.upload(file.tempFilePath, options);
+            updateData.imageUrl = result.secure_url;
+        }
+
+        const updatedSport = await Sport.findByIdAndUpdate(_id, updateData, { new: true, runValidators: true });
 
         if (!updatedSport) {
             return res.status(404).json({

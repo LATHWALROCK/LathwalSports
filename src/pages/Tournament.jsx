@@ -465,7 +465,7 @@ function Tournament() {
         {/* International Tournament Section */}
         {displayInternational && (
           <div className="mb-12">
-            <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-6">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6 mb-6">
               {internationalTournaments.map((tournament) => (
                 <li key={tournament._id}>
                   <IndividualTournament

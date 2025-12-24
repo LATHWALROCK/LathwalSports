@@ -9,7 +9,11 @@ const { GET_SPORT, CREATE_SPORT, UPDATE_SPORT, DELETE_SPORT } = sportEndpoints;
 function Sport() {
   const [data, setData] = useState([]);
   const [formData, setFormData] = useState({ name: "" });
+  const [image, setImage] = useState(null);
+  const [preview, setPreview] = useState(null);
   const [editData, setEditData] = useState({ _id: "", name: "" });
+  const [editImage, setEditImage] = useState(null);
+  const [editPreview, setEditPreview] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const { name } = formData;
@@ -33,17 +37,56 @@ function Sport() {
     }));
   };
 
+  // Image handler
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImage(file);
+      setPreview(URL.createObjectURL(file));
+    }
+  };
+
+  // Edit image handler
+  const handleEditImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setEditImage(file);
+      setEditPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleOnSubmit = (e) => {
     e.preventDefault();
+
+    // Basic validation
+    if (!name || !name.trim()) {
+      toast.error("Sport name is required");
+      return;
+    }
+
+    if (!image) {
+      toast.error("Sport logo/image is required");
+      return;
+    }
+
     const toastId = toast.loading("Creating sport...");
 
-    apiConnector("POST", CREATE_SPORT, { name })
+    const formDataObj = new FormData();
+    formDataObj.append("name", name.trim());
+    formDataObj.append("image", image);
+
+    apiConnector("POST", CREATE_SPORT, formDataObj, {
+      "Content-Type": "multipart/form-data",
+    })
       .then((response) => {
         if (!response.data.success) {
           throw new Error(response.data.message);
         }
         toast.success("Sport created successfully");
+        // Reset form
         setFormData({ name: "" });
+        setImage(null);
+        setPreview(null);
         setShowForm(false);
         fetchData();
       })
@@ -56,22 +99,42 @@ function Sport() {
       });
   };
 
-  const handleEdit = (_id, currentName) => {
+  const handleEdit = (_id, currentName, sportData) => {
     setEditData({ _id, name: currentName });
+    setEditPreview(sportData.imageUrl || null);
     setShowEditForm(true);
   };
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
+
+    // Basic validation
+    if (!editData.name || !editData.name.trim()) {
+      toast.error("Sport name is required");
+      return;
+    }
+
     const toastId = toast.loading("Updating sport...");
 
-    apiConnector("PUT", UPDATE_SPORT, editData)
+    const formDataObj = new FormData();
+    formDataObj.append("_id", editData._id);
+    formDataObj.append("name", editData.name.trim());
+    if (editImage) {
+      formDataObj.append("image", editImage);
+    }
+
+    apiConnector("PUT", UPDATE_SPORT, formDataObj, {
+      "Content-Type": "multipart/form-data",
+    })
       .then((response) => {
         if (!response.data.success) {
           throw new Error(response.data.message);
         }
         toast.success("Sport updated successfully");
+        // Reset edit form
         setEditData({ _id: "", name: "" });
+        setEditImage(null);
+        setEditPreview(null);
         setShowEditForm(false);
         fetchData();
       })
@@ -119,14 +182,16 @@ function Sport() {
             Sports
           </h1>
 
-          <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-6">
+          <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6 mb-6">
             {data.map((sport) => (
               <li key={sport._id}>
                 <IndividualSport
                   title={sport.name}
+                  image={sport.imageUrl}
                   _id={sport._id}
                   onDelete={handleDelete}
                   onEdit={handleEdit}
+                  sportData={sport}
                 />
               </li>
             ))}
@@ -163,6 +228,32 @@ function Sport() {
                            focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
+
+              <label
+                htmlFor="imageUpload"
+                className="w-40 h-40 border-2 border-dashed border-black rounded-xl flex items-center justify-center
+                cursor-pointer text-gray-500 hover:border-black transition mx-auto"
+              >
+                {preview ? (
+                  <img
+                    src={preview}
+                    alt="Preview"
+                    className="w-full h-full object-cover rounded-xl"
+                  />
+                ) : (
+                  <span>Upload Logo</span>
+                )}
+              </label>
+              <input
+                id="imageUpload"
+                type="file"
+                name="image"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+                required={!preview}
+              />
+
               <div className="flex justify-center gap-3">
                 <button
                   type="submit"
@@ -173,7 +264,12 @@ function Sport() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={() => {
+                    setShowForm(false);
+                    setFormData({ name: "" });
+                    setImage(null);
+                    setPreview(null);
+                  }}
                   className="border border-black bg-gray-100 text-black px-4 py-2 rounded-lg
                              hover:bg-gray-200 transition"
                 >
@@ -202,6 +298,31 @@ function Sport() {
                            focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
+
+              <label
+                htmlFor="editImageUpload"
+                className="w-40 h-40 border-2 border-dashed border-black rounded-xl flex items-center justify-center
+                cursor-pointer text-gray-500 hover:border-black transition mx-auto"
+              >
+                {editPreview ? (
+                  <img
+                    src={editPreview}
+                    alt="Preview"
+                    className="w-full h-full object-cover rounded-xl"
+                  />
+                ) : (
+                  <span>Upload Logo</span>
+                )}
+              </label>
+              <input
+                id="editImageUpload"
+                type="file"
+                name="image"
+                accept="image/*"
+                onChange={handleEditImageChange}
+                className="hidden"
+              />
+
               <div className="flex justify-center gap-3">
                 <button
                   type="submit"
@@ -215,6 +336,8 @@ function Sport() {
                   onClick={() => {
                     setShowEditForm(false);
                     setEditData({ _id: "", name: "" });
+                    setEditImage(null);
+                    setEditPreview(null);
                   }}
                   className="border border-black bg-gray-100 text-black px-4 py-2 rounded-lg
                              hover:bg-gray-200 transition"

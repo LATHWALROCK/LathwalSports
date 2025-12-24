@@ -58,24 +58,24 @@ const Tournament = ({ title, image, sport, _id, type, onDelete, onEdit }) => {
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          className="bg-gray-100 shadow-md rounded-2xl p-6 flex flex-col items-center 
-                 justify-between text-lg font-semibold text-black hover:bg-gray-200 
-                 hover:scale-105 transition-all duration-300 cursor-pointer h-64 w-full"
+          className="bg-gray-100 p-4 flex flex-col items-start
+                 justify-between text-lg font-semibold text-black hover:bg-gray-200
+                 transition-all duration-300 cursor-pointer aspect-[3/2]"
         >
-          <div className="w-full h-40 flex items-center justify-center p-2 bg-white rounded-lg">
+          <div className="w-full flex-1 flex items-center justify-center p-2">
             <img
               src={image}
               alt={title}
-              className="max-h-full max-w-full object-contain"
+              className="max-h-full max-w-full object-contain rounded-xl"
             />
           </div>
 
-          <p className="text-center mt-2">{title}</p>
+          <p className="text-left text-base px-2 break-words overflow-hidden w-full" style={{ maxHeight: '3rem', lineHeight: '1.5rem', marginTop: '0px' }} title={title}>{title}</p>
         </div>
       </Link>
 
       {showConfirm && (
-        <div className="absolute inset-0 bg-white rounded-2xl flex flex-col items-center justify-center shadow-lg ring-1 ring-black">
+        <div className="absolute inset-0 bg-white flex flex-col items-center justify-center ring-1 ring-black">
           <p className="font-medium text-black">Delete "{title}"?</p>
           <div className="flex gap-3">
             <button

@@ -7,7 +7,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import Select from "react-select";
 import { ArrowLeft } from "lucide-react";
 
-const { GET_TEAM_BY_SPORT_AND_TOURNAMENT } = teamEndpoints; // eslint-disable-line no-undef
+const { GET_TEAM_BY_SPORT, GET_TEAM_BY_SPORT_AND_TOURNAMENT } = teamEndpoints;
 const { GET_LEAGUE, CREATE_LEAGUE, UPDATE_LEAGUE, DELETE_LEAGUE } = leagueEndpoints;
 const { GET_TOURNAMENT_BY_TOURNAMENT_ID } = tournamentEndpoints;
 const { GET_SPORT } = sportEndpoints;
@@ -52,15 +52,21 @@ function League() {
       // For international tournaments, get national teams by sport
       // For league tournaments, get league teams by sport and tournament
       const endpoint = tournamentData[0]?.type === "International"
-        ? GET_TEAM_BY_SPORT // eslint-disable-line no-undef
-        : GET_TEAM_BY_SPORT_AND_TOURNAMENT; // eslint-disable-line no-undef
+        ? GET_TEAM_BY_SPORT
+        : GET_TEAM_BY_SPORT_AND_TOURNAMENT;
 
       const queryParams = tournamentData[0]?.type === "International"
         ? { sport }
         : { sport, tournament };
 
       const response = await apiConnector("GET", endpoint, null, null, queryParams);
-      setTeamData(response.data.data);
+
+      // For international tournaments, filter to only national teams
+      const filteredTeams = tournamentData[0]?.type === "International"
+        ? response.data.data.filter(team => team.type === "National")
+        : response.data.data;
+
+      setTeamData(filteredTeams);
     } catch (error) {
       toast.error("Failed to fetch teams");
       console.error("FETCH TEAMS ERROR:", error);
