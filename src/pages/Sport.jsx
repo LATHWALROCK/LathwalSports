@@ -176,6 +176,16 @@ function Sport() {
 
   return (
     <>
+      {/* Add Sport Button - Top Right Corner */}
+      <button
+        onClick={() => setShowForm(true)}
+        className="fixed top-20 right-6 bg-gray-100 shadow-md rounded-lg p-3 text-black
+                   hover:bg-gray-200 transition-colors duration-300 z-10"
+        title="Add Sport"
+      >
+        <span className="text-2xl font-bold">+</span>
+      </button>
+
       <div className="bg-gradient-to-b from-white to-gray-50 text-black py-10 px-4">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-center mb-8">
@@ -195,18 +205,6 @@ function Sport() {
                 />
               </li>
             ))}
-            {/* Add Sport Tile */}
-            <li>
-              <div
-                onClick={() => setShowForm(true)}
-                className="bg-gray-100 shadow-md rounded-2xl p-6 flex items-center justify-center
-                           text-3xl font-bold text-gray-400 hover:bg-gray-200 hover:text-gray-600
-                           hover:scale-105 transition-all duration-300 cursor-pointer min-h-[120px]"
-                title="Add Sport"
-              >
-                +
-              </div>
-            </li>
           </ul>
         </div>
       </div>

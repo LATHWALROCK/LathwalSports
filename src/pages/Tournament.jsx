@@ -449,13 +449,33 @@ function Tournament() {
     <div className="bg-gradient-to-b from-white to-gray-50 text-black py-10 px-4 relative">
       {/* Back Button - Top Left Corner */}
       <button
-        onClick={() => navigate(`/tournament-selector?sport=${sportParam}`)}
+        onClick={() => navigate("/")}
         className="fixed top-20 left-6 bg-gray-100 shadow-md rounded-lg p-3 text-black
                    hover:bg-gray-200 transition-colors duration-300 z-10"
-        title="Back to Type Selection"
+        title="Back to Sports"
       >
         <ArrowLeft size={24} />
       </button>
+
+      {/* Add Tournament Button - Top Right Corner */}
+      {sportParam && (
+        <button
+          onClick={() => {
+            if (typeParam === "International" || (!typeParam && displayInternational)) {
+              handleSelectType("International");
+            } else if (typeParam === "League") {
+              handleSelectType("League");
+            } else {
+              handleSelectType("International");
+            }
+          }}
+          className="fixed top-20 right-6 bg-gray-100 shadow-md rounded-lg p-3 text-black
+                     hover:bg-gray-200 transition-colors duration-300 z-10 flex items-center justify-center"
+          title="Add Tournament"
+        >
+          <span className="text-2xl font-bold leading-none w-6 h-6 flex items-center justify-center">+</span>
+        </button>
+      )}
 
       <div className="max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-8">
@@ -479,21 +499,6 @@ function Tournament() {
                   />
                 </li>
               ))}
-
-              {/* Add International Tournament Tile - Part of grid */}
-              {sportParam && (!typeParam || typeParam === "International") && (
-                <li>
-                  <div
-                    onClick={() => handleSelectType("International")}
-                    className="bg-gray-100 shadow-md rounded-2xl p-6 flex items-center justify-center
-                               text-6xl font-bold text-gray-400 hover:bg-gray-200 hover:text-gray-600
-                               hover:scale-105 transition-all duration-300 cursor-pointer h-full min-h-[120px]"
-                    title="Add International Tournament"
-                  >
-                    +
-                  </div>
-                </li>
-              )}
             </ul>
 
             {internationalTournaments.length === 0 && (
@@ -552,18 +557,16 @@ function Tournament() {
                 return (
                   <div key={tournament._id} className="space-y-6">
                     {/* Tournament Tile */}
-                    <div className="flex justify-center">
-                      <div className="max-w-sm w-full">
-                        <IndividualTournament
-                          title={tournament.name}
-                          image={tournament.imageUrl}
-                          sport={tournament.sport._id}
-                          _id={tournament._id}
-                          type={tournament.type}
-                          onDelete={handleDelete}
-                          onEdit={handleEdit}
-                        />
-                      </div>
+                    <div className="max-w-xs mx-auto">
+                      <IndividualTournament
+                        title={tournament.name}
+                        image={tournament.imageUrl}
+                        sport={tournament.sport._id}
+                        _id={tournament._id}
+                        type={tournament.type}
+                        onDelete={handleDelete}
+                        onEdit={handleEdit}
+                      />
                     </div>
 
                     {/* Teams for this Tournament */}
@@ -618,23 +621,6 @@ function Tournament() {
               <p className="text-gray-500 text-center">
                 No league tournaments yet
               </p>
-            )}
-
-            {/* Add New League Tournament Tile */}
-            {sportParam && (!typeParam || typeParam === "League") && (
-              <div className="flex justify-center">
-                <div className="max-w-sm w-full">
-                  <div
-                    onClick={() => handleSelectType("League")}
-                    className="bg-gray-100 shadow-md rounded-2xl p-6 flex items-center justify-center
-                               text-6xl font-bold text-gray-400 hover:bg-gray-200 hover:text-gray-600
-                               hover:scale-105 transition-all duration-300 cursor-pointer h-full min-h-[120px]"
-                    title="Add League Tournament"
-                  >
-                    +
-                  </div>
-                </div>
-              </div>
             )}
           </div>
         )}

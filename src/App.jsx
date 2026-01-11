@@ -2,7 +2,6 @@ import "./App.css"
 import { Route, Routes } from "react-router-dom"
 import Sport from "./pages/Sport"
 import Tournament from "./pages/Tournament"
-import TournamentTypeSelector from "./pages/TournamentTypeSelector"
 import League from "./pages/League"
 import TeamDetail from "./pages/TeamDetail"
 import Navbar from "./components/Navbar"
@@ -16,7 +15,6 @@ function App() {
       <div className="flex-1">
         <Routes>
           <Route path="/" element={<Sport />} />
-          <Route path="/tournament-selector" element={<TournamentTypeSelector />} />
           <Route path="/tournament" element={<Tournament />} />
           <Route path="/leagues" element={<League />} />
           <Route path="/team/:id" element={<TeamDetail />} />
@@ -27,3 +25,4 @@ function App() {
 }
 
 export default App
+

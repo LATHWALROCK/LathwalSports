@@ -58,11 +58,11 @@ const Tournament = ({ title, image, sport, _id, type, onDelete, onEdit }) => {
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          className="bg-gray-100 p-4 flex flex-col items-start
-                 justify-between text-lg font-semibold text-black hover:bg-gray-200
+          className="bg-gray-100 shadow-md rounded-2xl p-4 flex flex-col items-center
+                 text-lg font-semibold text-black hover:bg-gray-200
                  transition-all duration-300 cursor-pointer aspect-[3/2]"
         >
-          <div className="w-full flex-1 flex items-center justify-center p-2">
+          <div className="w-full h-32 flex items-center justify-center mb-2">
             <img
               src={image}
               alt={title}
@@ -70,7 +70,7 @@ const Tournament = ({ title, image, sport, _id, type, onDelete, onEdit }) => {
             />
           </div>
 
-          <p className="text-left text-base px-2 break-words overflow-hidden w-full" style={{ maxHeight: '3rem', lineHeight: '1.5rem', marginTop: '0px' }} title={title}>{title}</p>
+          <p className="text-center text-base px-2 break-words overflow-hidden w-full h-12 flex items-center justify-center" style={{ lineHeight: '1.5rem' }} title={title}>{title}</p>
         </div>
       </Link>
 
