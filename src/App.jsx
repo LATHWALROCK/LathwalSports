@@ -1,28 +1,63 @@
-import "./App.css"
-import { Route, Routes } from "react-router-dom"
-import Sport from "./pages/Sport"
-import Tournament from "./pages/Tournament"
-import League from "./pages/League"
-import TeamDetail from "./pages/TeamDetail"
-import Navbar from "./components/Navbar"
+import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { SportsProvider } from "./context/SportsContext";
+import Topbar from "./components/Topbar";
+import Dashboard from "./pages/Dashboard";
+import CompetitionDetail from "./pages/CompetitionDetail";
+import TeamDetail from "./pages/TeamDetail";
+import Explore from "./pages/Explore";
 
-function App() {
+// Modals
+import AddEditionModal from "./components/modals/AddEditionModal";
+import CreateSportModal from "./components/modals/CreateSportModal";
+import CreateTournamentModal from "./components/modals/CreateTournamentModal";
+import CreateTeamModal from "./components/modals/CreateTeamModal";
+import DeleteEditionModal from "./components/modals/DeleteEditionModal";
 
+import "./App.css";
+
+function AppContent() {
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar></Navbar>
-      <div className="h-16"></div>
-      <div className="flex-1">
-        <Routes>
-          <Route path="/" element={<Sport />} />
-          <Route path="/tournament" element={<Tournament />} />
-          <Route path="/leagues" element={<League />} />
-          <Route path="/team/:id" element={<TeamDetail />} />
-        </Routes>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      <Topbar />
+
+      <main style={{ flex: 1 }}>
+        <div className="wrap">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/competition/:id" element={<CompetitionDetail />} />
+            <Route path="/c/:id" element={<CompetitionDetail />} />
+            <Route path="/team/:id" element={<TeamDetail />} />
+            <Route path="/explore" element={<Explore />} />
+            {/* Legacy route fallbacks */}
+            <Route path="/tournament" element={<Navigate to="/" replace />} />
+            <Route path="/leagues" element={<Navigate to="/explore" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+      </main>
+
+      <footer>
+        <div className="wrap">
+          <span>Champions Tracker · Comprehensive Sports Winners &amp; Roll of Honour</span>
+          <span>Logos and trademarks belong to their respective owners.</span>
+        </div>
+      </footer>
+
+      {/* Referenced Modals System */}
+      <AddEditionModal />
+      <CreateSportModal />
+      <CreateTournamentModal />
+      <CreateTeamModal />
+      <DeleteEditionModal />
     </div>
-  )
+  );
 }
 
-export default App
-
+export default function App() {
+  return (
+    <SportsProvider>
+      <AppContent />
+    </SportsProvider>
+  );
+}

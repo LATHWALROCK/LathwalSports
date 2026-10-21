@@ -3,8 +3,8 @@ import { Trash2, Edit } from "lucide-react";
 import Team from "../components/Team";
 
 const LeagueTile = ({ title, logo, teams, _id, onDelete, onEdit, leagueData }) => {
-  // Find all winners (teams with position = 1)
-  const winners = teams.filter((t) => t.position === 1);
+  // Find all winners (teams with position = 1, or position = 2 if shared)
+  const winners = teams.filter((t) => t.position === 1 || (leagueData?.shared && t.position === 2));
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [hovered, setHovered] = useState(false);

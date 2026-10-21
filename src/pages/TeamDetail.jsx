@@ -1,240 +1,440 @@
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
-import { apiConnector } from "../services/apiConnector";
-import {
-  teamEndpoints,
-  leagueEndpoints,
-} from "../services/apis";
-import { ArrowLeft } from "lucide-react";
+import React from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useSports } from "../context/SportsContext";
+import Logo from "../components/Logo";
+import { Trophy, Edit2, Plus } from "lucide-react";
 
-const {
-  GET_TEAM_BY_ID,
-  GET_TEAMS_BY_CITY_AND_SPORT,
-  GET_TEAMS_BY_COUNTRY_AND_SPORT,
-} = teamEndpoints;
-const { GET_LEAGUE_BY_TEAM } = leagueEndpoints;
-
-function TeamDetail() {
+export default function TeamDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [team, setTeam] = useState(null);
-  const [relatedTeams, setRelatedTeams] = useState([]);
-  const [wonEditions, setWonEditions] = useState([]);
-  const [runnerUpEditions, setRunnerUpEditions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    teams,
+    tournaments,
+    leagues,
+    isAdmin,
+    openCreateTeamModal,
+    openEditTeamModal,
+  } = useSports();
 
-  const fetchTeamData = useCallback(async () => {
-    try {
-      setLoading(true);
-
-      // Fetch team by ID
-      const teamResponse = await apiConnector("GET", GET_TEAM_BY_ID, null, null, { _id: id });
-      const teamData = teamResponse.data.data;
-      setTeam(teamData);
-
-      let relatedTeamsData = [];
-
-      // Fetch related teams based on type (all teams from same city/country and sport)
-      if (teamData.type === "League" && teamData.city && teamData.sport?._id) {
-        const relatedResponse = await apiConnector(
-          "GET",
-          GET_TEAMS_BY_CITY_AND_SPORT,
-          null,
-          null,
-          { city: teamData.city, sport: teamData.sport._id }
-        );
-        relatedTeamsData = relatedResponse.data.data;
-        setRelatedTeams(relatedTeamsData);
-      } else if (teamData.type === "National" && teamData.country && teamData.sport?._id) {
-        const relatedResponse = await apiConnector(
-          "GET",
-          GET_TEAMS_BY_COUNTRY_AND_SPORT,
-          null,
-          null,
-          { country: teamData.country, sport: teamData.sport._id }
-        );
-        relatedTeamsData = relatedResponse.data.data;
-        setRelatedTeams(relatedTeamsData);
-      }
-
-      // Fetch leagues where ALL related teams participated
-      if (relatedTeamsData.length > 0) {
-        const allTeamIds = relatedTeamsData.map(t => t._id);
-        const allLeaguesPromises = allTeamIds.map(teamId =>
-          apiConnector("GET", GET_LEAGUE_BY_TEAM, null, null, { teamId })
-        );
-
-        const leaguesResponses = await Promise.all(allLeaguesPromises);
-        const allLeagues = leaguesResponses.flatMap(response => response.data.data || []);
-
-        // Remove duplicates based on league _id
-        const uniqueLeagues = allLeagues.filter((league, index, self) =>
-          index === self.findIndex(l => l._id === league._id)
-        );
-
-        // Filter leagues where any of the related teams won (position 1)
-        const won = uniqueLeagues.filter(league => {
-          return league.teams.some(teamEntry => {
-            const teamId = teamEntry.team?._id || teamEntry.team;
-            return allTeamIds.includes(teamId?.toString()) && teamEntry.position === 1;
-          });
-        });
-        setWonEditions(won);
-
-        // Filter leagues where any of the related teams was runner-up (position 2)
-        const runnerUp = uniqueLeagues.filter(league => {
-          return league.teams.some(teamEntry => {
-            const teamId = teamEntry.team?._id || teamEntry.team;
-            return allTeamIds.includes(teamId?.toString()) && teamEntry.position === 2;
-          });
-        });
-        setRunnerUpEditions(runnerUp);
-      }
-
-    } catch (error) {
-      console.error("FETCH TEAM DETAIL ERROR:", error);
-      toast.error("Failed to fetch team details");
-      navigate("/teams");
-    } finally {
-      setLoading(false);
-    }
-  }, [id, navigate]);
-
-  useEffect(() => {
-    if (id) {
-      fetchTeamData();
-    }
-  }, [id, fetchTeamData]);
-
-  if (loading) {
-    return (
-      <div className="bg-gradient-to-b from-white to-gray-50 text-black py-10 px-4">
-        <div className="max-w-6xl mx-auto text-center">
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const team = teams.find((tm) => tm._id === id);
 
   if (!team) {
     return (
-      <div className="bg-gradient-to-b from-white to-gray-50 text-black py-10 px-4 relative">
-        {/* Back Button - Top Left Corner */}
-        <button
-          onClick={() => navigate(-1)}
-          className="absolute top-6 left-6 bg-gray-100 shadow-md rounded-lg px-4 py-2 text-black font-medium
-                     hover:bg-gray-200 transition-colors duration-300 z-10"
-        >
-          ← Back
-        </button>
-
-        <div className="max-w-6xl mx-auto text-center">
-          <p>Team not found</p>
-        </div>
+      <div className="empty-state">
+        <h2>Team Not Found</h2>
+        <p style={{ marginTop: "10px" }}>
+          <Link to="/" style={{ color: "var(--football)" }}>
+            ← Back to Dashboard
+          </Link>
+        </p>
       </div>
     );
   }
 
+  // All eras/versions sharing the same common teamIdentifier
+  const teamIdentifier = team.teamIdentifier || team._id;
+  const rawTeamEras = teams.filter(
+    (tm) => (tm.teamIdentifier || tm._id) === teamIdentifier
+  );
+
+  // Dynamically calculate active years from tournament editions
+  const teamEras = rawTeamEras
+    .map((era) => {
+      const eraEditions = leagues.filter((l) =>
+        l.teams?.some((t) => (t.team?._id || t.team) === era._id)
+      );
+      const years = eraEditions
+        .map((l) => Number(l.year))
+        .filter((y) => !isNaN(y) && y > 0)
+        .sort((a, b) => a - b);
+
+      const minYear = years.length > 0 ? years[0] : null;
+      const maxYear = years.length > 0 ? years[years.length - 1] : null;
+
+      let eraDisplay = "";
+      if (years.length > 0) {
+        if (era.isCurrent) {
+          eraDisplay = `${minYear} – Present`;
+        } else if (minYear === maxYear) {
+          eraDisplay = `${minYear}`;
+        } else {
+          eraDisplay = `${minYear} – ${maxYear}`;
+        }
+      } else {
+        eraDisplay = era.isCurrent ? "Current Version" : "Historical Version";
+      }
+
+      return {
+        ...era,
+        firstYear: minYear,
+        lastYear: maxYear,
+        editionsCount: years.length,
+        eraDisplay,
+      };
+    })
+    .sort((a, b) => {
+      if (a.firstYear && b.firstYear) return a.firstYear - b.firstYear;
+      if (a.firstYear) return -1;
+      if (b.firstYear) return 1;
+      return (a.isCurrent ? 1 : 0) - (b.isCurrent ? 1 : 0);
+    });
+
+  // Find current active version
+  const currentVersion = teamEras.find((tm) => tm.isCurrent) || team;
+  const eraIds = new Set(teamEras.map((tm) => tm._id));
+
+  // All editions where any era of this team is Winner (position 1, or position 2 if shared)
+  const titleWins = leagues.filter((l) =>
+    l.teams?.some(
+      (t) =>
+        eraIds.has(t.team?._id || t.team) &&
+        (t.position === 1 || (l.shared && t.position === 2))
+    )
+  );
+
+  // All editions where any era of this team is Runner-up (position 2 and NOT shared)
+  const runnerUpFinishes = leagues.filter((l) =>
+    l.teams?.some(
+      (t) =>
+        eraIds.has(t.team?._id || t.team) &&
+        t.position === 2 &&
+        !l.shared
+    )
+  );
+
+  // All editions where this team participated
+  const allParticipations = leagues.filter((l) =>
+    l.teams?.some((t) => eraIds.has(t.team?._id || t.team))
+  );
+
+  // Group participations by competition
+  const compMap = {};
+  allParticipations.forEach((l) => {
+    const tourId = l.tournament?._id || l.tournament;
+    if (!tourId) return;
+    if (!compMap[tourId]) {
+      const tourDoc = tournaments.find((t) => t._id === tourId);
+      compMap[tourId] = {
+        tournament: tourDoc || l.tournament,
+        editions: [],
+        wins: [],
+        runnerUps: [],
+      };
+    }
+    compMap[tourId].editions.push(l);
+    const pos = l.teams?.find((t) => eraIds.has(t.team?._id || t.team))?.position;
+    if (pos === 1 || (l.shared && pos === 2)) compMap[tourId].wins.push(l);
+    else if (pos === 2) compMap[tourId].runnerUps.push(l);
+  });
+
+  const compList = Object.values(compMap).sort(
+    (a, b) => b.wins.length - a.wins.length || b.editions.length - a.editions.length
+  );
+
+  const latestTitle = titleWins.sort((a, b) => (b.year || 0) - (a.year || 0))[0];
+
   return (
-    <div className="bg-gradient-to-b from-white to-gray-50 text-black py-10 px-4 relative">
-      {/* Back Button - Top Left Corner */}
+    <div>
       <button
+        type="button"
+        className="back"
         onClick={() => navigate(-1)}
-        className="fixed top-20 left-6 bg-gray-100 shadow-md rounded-lg p-3 text-black
-                   hover:bg-gray-200 transition-colors duration-300 z-10"
-        title="Back"
       >
-        <ArrowLeft size={24} />
+        ← Back
       </button>
 
-      <div className="max-w-6xl mx-auto">
-        {/* Get latest active team name */}
-        {(() => {
-          const activeTeams = relatedTeams.filter(t => !t.inactive);
-          const latestActive = activeTeams.length > 0 ? activeTeams[0] : team; // fallback to current team
-          return <h1 className="text-5xl font-bold text-center mb-8">{latestActive.name}</h1>;
-        })()}
+      {/* Team Profile Header */}
+      <section className="detail-head">
+        <Logo
+          url={currentVersion.imageUrl}
+          label={currentVersion.name}
+          size="xxl"
+        />
 
-        {/* Section 1: All Team Logos (versions) side by side */}
-        {relatedTeams.length > 0 && (
-          <div className="mb-12">
-            <div className="bg-gray-100 rounded-2xl p-8">
-              <div className="flex flex-wrap gap-8 justify-center items-center">
-              {relatedTeams.map((relatedTeam) => (
-                <div
-                  key={relatedTeam._id}
-                  className={`flex-shrink-0 ${relatedTeam.inactive ? 'opacity-50 grayscale' : ''}`}
-                >
-                  <img
-                    src={relatedTeam.imageUrl}
-                    alt={relatedTeam.name}
-                    className="h-44 w-44 object-contain"
-                  />
-                </div>
-              ))}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", flexWrap: "wrap" }}>
+            <div>
+              <div className="eyebrow">
+                Team Profile · {currentVersion.city || currentVersion.country || currentVersion.type || "Club"}
               </div>
+              <h1 style={{ marginTop: "6px" }}>{currentVersion.name}</h1>
+            </div>
+
+            {isAdmin && (
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={() => openEditTeamModal(currentVersion)}
+                title="Edit this team version"
+                style={{ marginTop: "4px" }}
+              >
+                <Edit2 size={14} style={{ display: "inline", verticalAlign: "-2px", marginRight: "4px" }} />
+                Edit Team
+              </button>
+            )}
+          </div>
+
+          <div className="meta">
+            <span className="pill football">
+              {currentVersion.sport?.name || "Sport"}
+            </span>
+            <span className="pill">
+              {currentVersion.type === "National" ? "National Team" : "Club / League"}
+            </span>
+            <span className="pill" style={{ letterSpacing: "0.5px" }}>
+              ID: {teamIdentifier}
+            </span>
+          </div>
+
+          <div className="kpis">
+            <div className="kpi">
+              <b style={{ color: "var(--gold)" }}>{titleWins.length}</b>
+              <span>Titles</span>
+            </div>
+            <div className="kpi">
+              <b style={{ color: "var(--silver)" }}>{runnerUpFinishes.length}</b>
+              <span>Runner-up Finishes</span>
+            </div>
+            <div className="kpi">
+              <b>{allParticipations.length}</b>
+              <span>Editions Participated</span>
+            </div>
+            <div className="kpi">
+              <b>{latestTitle?.season || latestTitle?.year || "—"}</b>
+              <span>Latest Title</span>
+            </div>
+          </div>
+
+          {/* Trophy Cabinet */}
+          {titleWins.length > 0 && (
+            <div className="trophy-cabinet">
+              {compList
+                .filter((item) => item.wins.length > 0)
+                .map((item) => (
+                  <Link
+                    key={item.tournament?._id || item.tournament?.name}
+                    className="t"
+                    to={`/competition/${item.tournament?._id}`}
+                  >
+                    <Logo
+                      url={item.tournament?.imageUrl}
+                      label={item.tournament?.name}
+                      size="xs"
+                    />
+                    <span>{item.tournament?.name}</span>
+                    <b>×{item.wins.length}</b>
+                  </Link>
+                ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Timeline: Evolution of Name & Crest over time */}
+      {teamEras.length > 0 && (
+        <div className="section">
+          <div className="section-head">
+            <div>
+              <h2>
+                <span className="bar" />
+                Evolution of Crest &amp; Identity
+              </h2>
+              <p>
+                {teamEras.length === 1
+                  ? "Current official crest and identity"
+                  : `${teamEras.length} distinct eras recorded in team history`}
+              </p>
+            </div>
+
+            {isAdmin && (
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={() =>
+                  openCreateTeamModal({
+                    role: "general",
+                    sportId: currentVersion.sport?._id || currentVersion.sport,
+                    tournamentId: currentVersion.tournament?._id || currentVersion.tournament,
+                  })
+                }
+                title="Add a new era version for this team"
+              >
+                <Plus size={14} style={{ display: "inline", verticalAlign: "-2px", marginRight: "4px" }} />
+                Add Era Version
+              </button>
+            )}
+          </div>
+
+          <div className="evo-timeline-wrap">
+            <div className="evo-timeline">
+              {teamEras.map((era) => {
+                const eraEditions = leagues.filter((l) =>
+                  l.teams?.some((t) => (t.team?._id || t.team) === era._id)
+                );
+                const eraWins = eraEditions.filter((l) =>
+                  l.teams?.some(
+                    (t) =>
+                      (t.team?._id || t.team) === era._id &&
+                      (t.position === 1 || (l.shared && t.position === 2))
+                  )
+                );
+
+                return (
+                  <div
+                    key={era._id}
+                    className={`evo-card ${era.isCurrent ? "now" : ""}`}
+                  >
+                    {/* Top Era Milestone Header & Connector */}
+                    <div className="evo-card-milestone">
+                      <div className="evo-node-dot" />
+                      <div className="evo-year-pill">
+                        {era.eraDisplay}
+                      </div>
+                    </div>
+
+                    {/* Crest Display Container */}
+                    <div className="evo-crest-wrap">
+                      <Logo url={era.imageUrl} label={era.name} size="xl" />
+                      {era.isCurrent && (
+                        <span className="evo-current-badge">
+                          ✓ Active Crest
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Era Details */}
+                    <div className="evo-meta">
+                      <div className="evo-name" title={era.name}>
+                        {era.name}
+                      </div>
+                      <div className="evo-sub">
+                        {era.city || era.country || (era.type === "National" ? "National Team" : "Club Franchise")}
+                      </div>
+
+                      {eraWins.length > 0 && (
+                        <div className="evo-honour">
+                          🏆 {eraWins.length} {eraWins.length === 1 ? "Title" : "Titles"}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Admin Edit Era Action */}
+                    {isAdmin && (
+                      <div className="evo-actions">
+                        <button
+                          type="button"
+                          className="btn-evo-edit"
+                          onClick={() => openEditTeamModal(era)}
+                          title={`Edit ${era.name} (${era.eraDisplay})`}
+                        >
+                          <Edit2 size={13} style={{ display: "inline", verticalAlign: "-2px", marginRight: "4px" }} />
+                          Edit Era
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Participation & Honours Grid */}
+      <div className="section">
+        <div className="section-head">
+          <div>
+            <h2>
+              <span className="bar" />
+              Participation &amp; Honours
+            </h2>
+            <p>Every competition and season recorded across all eras</p>
+          </div>
+          <div style={{ display: "flex", gap: "14px", fontSize: "12px", color: "var(--muted)", alignItems: "center" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ width: "10px", height: "10px", borderRadius: "3px", background: "var(--gold)" }} />
+              Champions
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ width: "10px", height: "10px", borderRadius: "3px", background: "var(--silver)" }} />
+              Runner-up
+            </span>
+          </div>
+        </div>
+
+        {compList.length > 0 ? (
+          <div className="honours">
+            {compList.map((item) => {
+              const tour = item.tournament;
+              if (!tour) return null;
+
+              const sortedEditions = item.editions.slice().sort(
+                (a, b) => (a.year || 0) - (b.year || 0)
+              );
+
+              return (
+                <div className="honour" key={tour._id}>
+                  <Link className="honour-top" to={`/competition/${tour._id}`}>
+                    <Logo
+                      url={tour.imageUrl}
+                      label={tour.name}
+                      size="md"
+                    />
+                    <div>
+                      <h3>{tour.name}</h3>
+                      <small style={{ color: "var(--muted)" }}>
+                        {sortedEditions[0]?.season || sortedEditions[0]?.year} –{" "}
+                        {sortedEditions[sortedEditions.length - 1]?.season ||
+                          sortedEditions[sortedEditions.length - 1]?.year}
+                      </small>
+                    </div>
+                    <div className="count">
+                      <b>{sortedEditions.length}</b>
+                      <span>{tour.type === "League" ? "Seasons" : "Editions"}</span>
+                    </div>
+                  </Link>
+
+                  <div className="part-stats">
+                    <span className="gold">🏆 {item.wins.length}</span>
+                    <span className="silver">🥈 {item.runnerUps.length}</span>
+                  </div>
+
+                  <div className="seasons">
+                    {sortedEditions.map((ed) => {
+                      const pos = ed.teams?.find(
+                        (t) => eraIds.has(t.team?._id || t.team)
+                      )?.position;
+                      const isWin = pos === 1 || (ed.shared && pos === 2);
+                      const isRu = !ed.shared && pos === 2;
+                      const cls = isWin ? "win" : isRu ? "ru" : "";
+
+                      return (
+                        <span
+                          key={ed._id}
+                          className={cls}
+                          title={`${ed.season || ed.year}${
+                            isWin ? " · Champions" : isRu ? " · Runner-up" : ""
+                          }`}
+                        >
+                          {ed.season || ed.year}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="roll">
+            <div className="empty-state">
+              <Trophy size={44} color="var(--dim)" style={{ marginBottom: "12px" }} />
+              <h3>No participation records yet</h3>
+              <p>Add this team to an edition to start tracking their honours cabinet.</p>
             </div>
           </div>
         )}
-
-        {/* Section 2: Tournament Editions Won */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-semibold mb-6">Tournament Editions Won ({wonEditions.length})</h2>
-          {wonEditions.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {wonEditions.map((league) => (
-                <div
-                  key={league._id}
-                  className="bg-gray-100 shadow-md rounded-2xl p-4 flex flex-col items-center justify-between hover:bg-gray-200 hover:scale-105 transition-all duration-300"
-                >
-                  <div className="w-full h-32 flex items-center justify-center p-1 bg-white rounded-lg mb-2">
-                    <img
-                      src={league.leagueImageUrl}
-                      alt={league.name}
-                      className="max-h-full max-w-full object-contain"
-                    />
-                  </div>
-                  <p className="text-center text-sm font-semibold">{league.name}</p>
-                  <p className="text-center text-xs text-gray-600">{league.year}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500">No tournament editions won yet</p>
-          )}
-        </div>
-
-        {/* Section 3: Tournament Editions Runner-Up */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-semibold mb-6">Tournament Editions Runner-Up ({runnerUpEditions.length})</h2>
-          {runnerUpEditions.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {runnerUpEditions.map((league) => (
-                <div
-                  key={league._id}
-                  className="bg-gray-100 shadow-md rounded-2xl p-4 flex flex-col items-center justify-between hover:bg-gray-200 hover:scale-105 transition-all duration-300"
-                >
-                  <div className="w-full h-32 flex items-center justify-center p-1 bg-white rounded-lg mb-2">
-                    <img
-                      src={league.leagueImageUrl}
-                      alt={league.name}
-                      className="max-h-full max-w-full object-contain"
-                    />
-                  </div>
-                  <p className="text-center text-sm font-semibold">{league.name}</p>
-                  <p className="text-center text-xs text-gray-600">{league.year}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500">No tournament editions runner-up yet</p>
-          )}
-        </div>
       </div>
     </div>
   );
 }
-
-export default TeamDetail;
-

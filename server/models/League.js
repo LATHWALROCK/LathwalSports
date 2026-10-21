@@ -3,8 +3,7 @@ const mongoose = require("mongoose")
 const teamSchema = new mongoose.Schema({
     position: {
         type: Number,
-        required: true,
-        min: 1,
+        required: false,
     },
     team: {
         type: mongoose.Schema.Types.ObjectId,
@@ -38,6 +37,14 @@ const leagueSchema = new mongoose.Schema(
             type: String,
             required: true,
             trim: true,
+        },
+        season: {
+            type: String,
+            trim: true,
+        },
+        shared: {
+            type: Boolean,
+            default: false,
         },
         teams: [teamSchema],
     },

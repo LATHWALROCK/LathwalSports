@@ -3,29 +3,48 @@ const cloudinary = require("cloudinary").v2;
 
 exports.createLeague = async (req, res) => {
   try {
-    const { name, year, sport, tournament } = req.body;
+    let { name, year, season, sport, tournament, shared } = req.body;
+
+    if (!season && year) {
+      season = String(year);
+    }
+    if (!year && season) {
+      const m = String(season).match(/(\d{4})(?:\s*[–-]\s*(\d{2,4}))?/);
+      if (m) {
+        year = m[2] ? (m[2].length === 4 ? Number(m[2]) : Number(m[1].slice(0, 2) + m[2])) : Number(m[1]);
+      } else {
+        year = parseInt(season, 10);
+      }
+    }
 
     if (!name || !year || !sport || !tournament) {
       return res.status(400).json({
         success: false,
-        message: "Name, year, sport and tournament are required",
+        message: "Name, season/year, sport and tournament are required",
       });
     }
 
     // check league logo
+    let leagueImageUrl = req.body.leagueImageUrl || req.body.imageUrl || "";
     const leagueFile = req.files?.image;
-    if (!leagueFile) {
-      return res.status(400).json({
-        success: false,
-        message: "League logo is required",
-      });
+    if (leagueFile) {
+      const leagueUpload = await cloudinary.uploader.upload(
+        leagueFile.tempFilePath,
+        { folder: "leagues" }
+      );
+      leagueImageUrl = leagueUpload.secure_url;
     }
 
-    const leagueUpload = await cloudinary.uploader.upload(
-      leagueFile.tempFilePath,
-      { folder: "leagues" }
-    );
-    const leagueImageUrl = leagueUpload.secure_url;
+    // If no logo uploaded, fallback to tournament logo
+    if (!leagueImageUrl) {
+      const TournamentModel = require("../models/Tournament");
+      const tourDoc = await TournamentModel.findById(tournament);
+      if (tourDoc && tourDoc.imageUrl) {
+        leagueImageUrl = tourDoc.imageUrl;
+      } else {
+        leagueImageUrl = "https://placehold.co/200x200/121826/ffffff?text=Trophy";
+      }
+    }
 
     // handle teams from req.body (optional - can be empty)
     const teams = [];
@@ -51,21 +70,24 @@ exports.createLeague = async (req, res) => {
           });
         }
 
-        teams.push({
-          team: teamId,
-          position: position ? Number(position) : idx + 1,
-        });
+        const teamObj = { team: teamId };
+        if (position !== undefined && position !== null && position !== "") {
+          teamObj.position = Number(position);
+        }
+        teams.push(teamObj);
       }
     }
 
     // save league
     const league = await League.create({
       name,
-      year,
+      year: Number(year),
+      season: season || String(year),
       sport,
       tournament,
       leagueImageUrl,
       teams,
+      shared: shared === "true" || shared === true,
     });
 
     return res.status(201).json({
@@ -85,12 +107,15 @@ exports.createLeague = async (req, res) => {
 exports.getLeague = async (req, res) => {
   try {
     const { sport, tournament } = req.query;
+    const filter = {};
+    if (sport) filter.sport = sport;
+    if (tournament) filter.tournament = tournament;
 
-    const leagues = await League.find({ sport, tournament })
+    const leagues = await League.find(filter)
       .populate("teams.team")
       .populate("sport")
       .populate("tournament")
-      .sort({ year: 1 });
+      .sort({ year: -1 });
 
     res.status(200).json({
       success: true,
@@ -107,18 +132,18 @@ exports.getLeague = async (req, res) => {
   }
 };
 
-
 exports.deleteLeague = async (req, res) => {
   try {
     const { name, _id } = req.body;
-    if (!name) {
+    if (!_id && !name) {
       return res.status(400).json({
         success: false,
-        message: "League name is required",
+        message: "League ID or name is required",
       });
     }
 
-    const deletedLeague = await League.findOneAndDelete({ name, _id });
+    const query = _id ? { _id } : { name };
+    const deletedLeague = await League.findOneAndDelete(query);
 
     if (!deletedLeague) {
       return res.status(404).json({
@@ -142,12 +167,24 @@ exports.deleteLeague = async (req, res) => {
 
 exports.updateLeague = async (req, res) => {
   try {
-    const { _id, name, year, sport, tournament } = req.body;
+    let { _id, name, year, season, sport, tournament, shared } = req.body;
+
+    if (!season && year) {
+      season = String(year);
+    }
+    if (!year && season) {
+      const m = String(season).match(/(\d{4})(?:\s*[–-]\s*(\d{2,4}))?/);
+      if (m) {
+        year = m[2] ? (m[2].length === 4 ? Number(m[2]) : Number(m[1].slice(0, 2) + m[2])) : Number(m[1]);
+      } else {
+        year = parseInt(season, 10);
+      }
+    }
 
     if (!_id || !name || !year || !sport || !tournament) {
       return res.status(400).json({
         success: false,
-        message: "League ID, name, year, sport and tournament are required for update",
+        message: "League ID, name, season/year, sport and tournament are required for update",
       });
     }
 
@@ -175,20 +212,23 @@ exports.updateLeague = async (req, res) => {
           });
         }
 
-        teams.push({
-          team: teamId,
-          position: position ? Number(position) : idx + 1,
-        });
+        const teamObj = { team: teamId };
+        if (position !== undefined && position !== null && position !== "") {
+          teamObj.position = Number(position);
+        }
+        teams.push(teamObj);
       }
     }
 
     // Prepare update data
     const updateData = {
       name,
-      year,
+      year: Number(year),
+      season: season || String(year),
       sport,
       tournament,
       teams,
+      shared: shared === "true" || shared === true,
     };
 
     // Handle image upload if provided

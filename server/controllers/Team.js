@@ -1,85 +1,73 @@
-const Team = require("../models/Team")
+const Team = require("../models/Team");
+const League = require("../models/League");
 const cloudinary = require("cloudinary").v2;
 
 exports.createTeam = async (req, res) => {
     try {
-        const { name, city, country, sport, type, tournament, inactive } = req.body;
+        const { name, teamIdentifier, isCurrent, city, country, sport, type, tournament } = req.body;
+        let imageUrl = req.body.imageUrl || "";
         const file = req.files?.image;
-        if (!file) {
+
+        if (file) {
+            const folder = "teams";
+            const options = { folder };
+            const result = await cloudinary.uploader.upload(file.tempFilePath, options);
+            imageUrl = result.secure_url;
+        }
+
+        if (!imageUrl) {
             return res.status(400).json({
                 success: false,
-                message: "Image file is required",
+                message: "Team logo image is required",
             });
         }
-        const folder = "teams";
-        const options = { folder };
-        const result = await cloudinary.uploader.upload(file.tempFilePath, options);
-        const imageUrl = result.secure_url;
 
         // Handle empty strings from FormData
         const cleanName = name && name.trim() ? name.trim() : null;
         const cleanSport = sport && sport.trim() ? sport.trim() : null;
-        const cleanType = type && type.trim() ? type.trim() : null;
+        const cleanType = type && type.trim() ? type.trim() : "National";
         const cleanCity = city && city.trim() ? city.trim() : null;
         const cleanCountry = country && country.trim() ? country.trim() : null;
         const cleanTournament = tournament && tournament.trim() ? tournament.trim() : null;
 
-
-        if (!cleanName || !cleanSport || !cleanType) {
-            const missingFields = [];
-            if (!cleanName) missingFields.push("name");
-            if (!cleanSport) missingFields.push("sport");
-            if (!cleanType) missingFields.push("type");
-
+        if (!cleanName || !cleanSport) {
             return res.status(403).json({
                 success: false,
-                message: `Missing required fields: ${missingFields.join(", ")}`,
+                message: "Team name and sport are required",
             });
         }
 
+        // Common identifier: user-provided or slugified from name
+        const cleanIdentifier = teamIdentifier && teamIdentifier.trim()
+            ? teamIdentifier.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+            : cleanName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-        // City is required for League teams, Country is required for National teams
-        if (cleanType === "League") {
-            if (!cleanCity) {
-                return res.status(403).json({
-                    success: false,
-                    message: "City is required for League teams",
-                });
-            }
+        const shouldBeCurrent = isCurrent === undefined || isCurrent === "true" || isCurrent === true;
 
-            if (!cleanTournament) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Tournament is required for League teams",
-                });
-            }
-        }
-
-        if (cleanType === "National") {
-            if (!cleanCountry) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Country is required for National teams",
-                });
-            }
+        if (shouldBeCurrent) {
+            // Update older versions sharing this common identifier
+            await Team.updateMany({ teamIdentifier: cleanIdentifier }, { isCurrent: false });
         }
 
         const team = await Team.create({
+            teamIdentifier: cleanIdentifier,
             name: cleanName,
-            city: cleanType === "League" ? cleanCity : undefined,
-            country: cleanType === "National" ? cleanCountry : undefined,
             imageUrl,
+            isCurrent: shouldBeCurrent,
+            city: cleanCity || undefined,
+            country: cleanCountry || undefined,
             sport: cleanSport,
             type: cleanType,
-            tournament: cleanType === "League" ? cleanTournament : undefined,
-            inactive: inactive === "true" || inactive === true
+            tournament: cleanTournament || undefined,
         });
+
         return res.status(200).json({
             success: true,
             team,
             message: "Team created successfully",
         });
     } catch (error) {
+        console.error("CREATE TEAM ERROR:", error);
         return res.status(500).json({
             success: false,
             message: "Team cannot be created. Please try again.",
@@ -92,12 +80,40 @@ exports.getTeam = async (req, res) => {
         const teams = await Team.find({})
             .populate("sport")
             .populate("tournament")
-            .sort({ name: 1 });
+            .sort({ isCurrent: -1, name: 1 })
+            .lean();
+
+        // Calculate dynamic active years based on tournament editions
+        const leagues = await League.find({}, { year: 1, teams: 1 }).lean();
+        const teamYearMap = {};
+        leagues.forEach((l) => {
+            if (!l.teams || !Array.isArray(l.teams)) return;
+            l.teams.forEach((t) => {
+                const tmId = String(t.team);
+                if (!teamYearMap[tmId]) teamYearMap[tmId] = [];
+                if (typeof l.year === "number") teamYearMap[tmId].push(l.year);
+            });
+        });
+
+        const teamsWithYears = teams.map((tm) => {
+            const years = teamYearMap[String(tm._id)] || [];
+            const minYear = years.length > 0 ? Math.min(...years) : null;
+            const maxYear = years.length > 0 ? Math.max(...years) : null;
+            return {
+                ...tm,
+                from: minYear,
+                to: tm.isCurrent ? null : maxYear,
+                firstYear: minYear,
+                lastYear: maxYear,
+                editionsCount: years.length,
+                activeYears: [...new Set(years)].sort((a, b) => a - b),
+            };
+        });
 
         res.status(200).json({
             success: true,
-            data: teams,
-            message: 'All teams data fetched in alphabetical order'
+            data: teamsWithYears,
+            message: 'All teams data fetched'
         });
     } catch (err) {
         console.error(err);
@@ -109,18 +125,78 @@ exports.getTeam = async (req, res) => {
     }
 };
 
+exports.getTeamTimeline = async (req, res) => {
+    try {
+        const { teamIdentifier, _id } = req.query;
+        let identifier = teamIdentifier;
+        if (!identifier && _id) {
+            const tm = await Team.findById(_id);
+            if (tm) identifier = tm.teamIdentifier;
+        }
+
+        if (!identifier) {
+            return res.status(400).json({ success: false, message: "Team identifier is required" });
+        }
+
+        const timeline = await Team.find({ teamIdentifier: identifier })
+            .populate("sport")
+            .populate("tournament")
+            .lean();
+
+        // Calculate active years dynamically for each era based on tournament editions
+        const timelineWithYears = await Promise.all(
+            timeline.map(async (tm) => {
+                const editions = await League.find({ "teams.team": tm._id }, { year: 1 }).lean();
+                const years = editions.map(l => l.year).filter(y => typeof y === "number");
+                const minYear = years.length > 0 ? Math.min(...years) : null;
+                const maxYear = years.length > 0 ? Math.max(...years) : null;
+                return {
+                    ...tm,
+                    from: minYear,
+                    to: tm.isCurrent ? null : maxYear,
+                    firstYear: minYear,
+                    lastYear: maxYear,
+                    editionsCount: years.length,
+                    activeYears: [...new Set(years)].sort((a, b) => a - b),
+                };
+            })
+        );
+
+        // Sort chronologically by first edition year (earliest first, current last if ongoing)
+        timelineWithYears.sort((a, b) => {
+            if (a.firstYear && b.firstYear) return a.firstYear - b.firstYear;
+            if (a.firstYear) return -1;
+            if (b.firstYear) return 1;
+            return new Date(a.createdAt) - new Date(b.createdAt);
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: timelineWithYears,
+            message: "Team timeline fetched successfully",
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 exports.getTeamBySportAndTournament = async (req, res) => {
     try {
         const { sport, tournament } = req.query;
-        const teams = await Team.find({sport, tournament})
+        const query = {};
+        if (sport) query.sport = sport;
+        if (tournament) query.tournament = tournament;
+
+        const teams = await Team.find(query)
             .populate("sport")
             .populate("tournament")
-            .sort({ name: 1 });
+            .sort({ isCurrent: -1, name: 1 });
 
         res.status(200).json({
             success: true,
             data: teams,
-            message: 'All teams data fetched in alphabetical order'
+            message: 'Teams fetched successfully'
         });
     } catch (err) {
         console.error(err);
@@ -138,7 +214,7 @@ exports.getTeamBySport = async (req, res) => {
         const teams = await Team.find({ sport })
             .populate("sport")
             .populate("tournament")
-            .sort({ name: 1 });
+            .sort({ isCurrent: -1, name: 1 });
 
         res.status(200).json({
             success: true,
@@ -158,14 +234,9 @@ exports.getTeamBySport = async (req, res) => {
 exports.deleteTeam = async (req, res) => {
     try {
         const { _id, name } = req.body;
-        if (!name) {
-            return res.status(400).json({
-                success: false,
-                message: "Team name is required",
-            });
-        }
+        const query = _id ? { _id } : { name };
 
-        const deletedTeam = await Team.findOneAndDelete({ _id });
+        const deletedTeam = await Team.findOneAndDelete(query);
 
         if (!deletedTeam) {
             return res.status(404).json({
@@ -176,7 +247,7 @@ exports.deleteTeam = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: `Team '${name}' deleted successfully`,
+            message: `Team deleted successfully`,
         });
     } catch (error) {
         console.error(error);
@@ -185,85 +256,46 @@ exports.deleteTeam = async (req, res) => {
             message: "Server error while deleting team",
         });
     }
-}
+};
 
 exports.updateTeam = async (req, res) => {
     try {
-        const { _id, name, city, country, sport, type, tournament, inactive } = req.body;
+        const { _id, name, teamIdentifier, isCurrent, city, country, sport, type, tournament } = req.body;
         const file = req.files?.image;
 
-        if (!_id || !name || !sport || !type) {
+        if (!_id || !name || !sport) {
             return res.status(400).json({
                 success: false,
-                message: "Team ID, name, sport, and type are required for update",
+                message: "Team ID, name, and sport are required for update",
             });
         }
 
-        // Handle empty strings from FormData
-        const cleanName = name && name.trim() ? name.trim() : null;
-        const cleanSport = sport && sport.trim() ? sport.trim() : null;
-        const cleanType = type && type.trim() ? type.trim() : null;
-        const cleanCity = city && city.trim() ? city.trim() : null;
-        const cleanCountry = country && country.trim() ? country.trim() : null;
-        const cleanTournament = tournament && tournament.trim() ? tournament.trim() : null;
+        const cleanName = name.trim();
+        const cleanSport = sport.trim();
+        const cleanType = type ? type.trim() : "National";
 
-        // Validation for required fields
-        if (!cleanName || !cleanSport || !cleanType) {
-            const missingFields = [];
-            if (!cleanName) missingFields.push("name");
-            if (!cleanSport) missingFields.push("sport");
-            if (!cleanType) missingFields.push("type");
-
-            return res.status(400).json({
-                success: false,
-                message: `Missing required fields: ${missingFields.join(", ")}`,
-            });
-        }
-
-        // City is required for League teams, Country is required for National teams
-        if (cleanType === "League") {
-            if (!cleanCity) {
-                return res.status(400).json({
-                    success: false,
-                    message: "City is required for League teams",
-                });
-            }
-            if (!cleanTournament) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Tournament is required for League teams",
-                });
-            }
-        }
-
-        if (cleanType === "National") {
-            if (!cleanCountry) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Country is required for National teams",
-                });
-            }
-        }
-
-        // Prepare update data
         const updateData = {
             name: cleanName,
             sport: cleanSport,
             type: cleanType,
-            inactive: inactive === "true" || inactive === true
+            city: city ? city.trim() : undefined,
+            country: country ? country.trim() : undefined,
+            tournament: tournament ? tournament.trim() : undefined,
         };
 
-        if (cleanType === "League") {
-            updateData.city = cleanCity;
-            updateData.country = undefined;
-            updateData.tournament = cleanTournament;
-        } else if (cleanType === "National") {
-            updateData.country = cleanCountry;
-            updateData.city = undefined;
-            updateData.tournament = undefined;
+        if (teamIdentifier) {
+            updateData.teamIdentifier = teamIdentifier.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        }
+        if (isCurrent !== undefined) {
+            updateData.isCurrent = isCurrent === "true" || isCurrent === true;
+            if (updateData.isCurrent && updateData.teamIdentifier) {
+                await Team.updateMany(
+                    { teamIdentifier: updateData.teamIdentifier, _id: { $ne: _id } },
+                    { isCurrent: false }
+                );
+            }
         }
 
-        // Handle image upload if provided
         if (file) {
             const folder = "teams";
             const options = { folder };
@@ -292,7 +324,7 @@ exports.updateTeam = async (req, res) => {
             message: "Team cannot be updated. Please try again.",
         });
     }
-}
+};
 
 exports.getTeamById = async (req, res) => {
     try {
@@ -306,7 +338,8 @@ exports.getTeamById = async (req, res) => {
 
         const team = await Team.findById(_id)
             .populate("sport")
-            .populate("tournament");
+            .populate("tournament")
+            .lean();
 
         if (!team) {
             return res.status(404).json({
@@ -314,6 +347,19 @@ exports.getTeamById = async (req, res) => {
                 message: "Team not found",
             });
         }
+
+        // Calculate dynamic active years based on tournament editions
+        const leagues = await League.find({ "teams.team": _id }, { year: 1 }).lean();
+        const years = leagues.map(l => l.year).filter(y => typeof y === "number");
+        const minYear = years.length > 0 ? Math.min(...years) : null;
+        const maxYear = years.length > 0 ? Math.max(...years) : null;
+
+        team.from = minYear;
+        team.to = team.isCurrent ? null : maxYear;
+        team.firstYear = minYear;
+        team.lastYear = maxYear;
+        team.editionsCount = years.length;
+        team.activeYears = [...new Set(years)].sort((a, b) => a - b);
 
         res.status(200).json({
             success: true,

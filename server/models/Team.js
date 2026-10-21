@@ -1,15 +1,25 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
 
 const teamSchema = new mongoose.Schema(
   {
-    imageUrl: {
+    teamIdentifier: {
       type: String,
       required: true,
+      trim: true,
+      index: true,
     },
     name: {
       type: String,
       required: true,
       trim: true,
+    },
+    imageUrl: {
+      type: String,
+      required: true,
+    },
+    isCurrent: {
+      type: Boolean,
+      default: true,
     },
     city: {
       type: String,
@@ -36,12 +46,8 @@ const teamSchema = new mongoose.Schema(
       ref: "tournament",
       required: false,
     },
-    inactive: {
-      type: Boolean,
-      default: false,
-    },
   },
   { timestamps: true }
-)
+);
 
-module.exports = mongoose.model("team", teamSchema)
+module.exports = mongoose.model("team", teamSchema);

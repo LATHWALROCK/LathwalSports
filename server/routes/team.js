@@ -7,6 +7,7 @@ const {
     getTeamBySport,
     getTeamBySportAndTournament,
     getTeamById,
+    getTeamTimeline,
     getTeamsByCityAndSport,
     getTeamsByCountryAndSport,
     updateTeam,
@@ -18,6 +19,7 @@ router.get("/getTeam",getTeam)
 router.get("/getTeamBySport", getTeamBySport);
 router.get("/getTeamBySportAndTournament", getTeamBySportAndTournament);
 router.get("/getTeamById", getTeamById);
+router.get("/getTeamTimeline", getTeamTimeline);
 router.get("/getTeamsByCityAndSport", getTeamsByCityAndSport);
 router.get("/getTeamsByCountryAndSport", getTeamsByCountryAndSport);
 router.put("/updateTeam", updateTeam);
