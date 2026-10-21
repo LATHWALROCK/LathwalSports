@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useSports } from "../context/SportsContext";
 import Logo from "../components/Logo";
+import Picklist from "../components/Picklist";
 import { Edit2, Trash2 } from "lucide-react";
 
 export default function Explore() {
@@ -98,50 +99,54 @@ export default function Explore() {
 
         <div className="field">
           <label htmlFor="f-sport">Sport</label>
-          <select
+          <Picklist
             id="f-sport"
             value={selectedSport}
-            onChange={(e) => {
-              setSelectedSport(e.target.value);
+            onChange={(val) => {
+              setSelectedSport(val);
               setSelectedTournament("all");
             }}
-          >
-            <option value="all">All Sports</option>
-            {sports.map((s) => (
-              <option key={s._id} value={s._id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: "all", label: "All Sports" },
+              ...sports.map((s) => ({
+                value: s._id,
+                label: s.name,
+                logo: s.imageUrl,
+              })),
+            ]}
+          />
         </div>
 
         <div className="field">
           <label htmlFor="f-kind">Type</label>
-          <select
+          <Picklist
             id="f-kind"
             value={selectedKind}
-            onChange={(e) => setSelectedKind(e.target.value)}
-          >
-            <option value="all">Tournaments &amp; Leagues</option>
-            <option value="tournament">Tournaments</option>
-            <option value="league">Leagues</option>
-          </select>
+            onChange={(val) => setSelectedKind(val)}
+            options={[
+              { value: "all", label: "Tournaments & Leagues" },
+              { value: "tournament", label: "Tournaments" },
+              { value: "league", label: "Leagues" },
+            ]}
+          />
         </div>
 
         <div className="field">
           <label htmlFor="f-comp">Competition</label>
-          <select
+          <Picklist
             id="f-comp"
             value={selectedTournament}
-            onChange={(e) => setSelectedTournament(e.target.value)}
-          >
-            <option value="all">All Competitions</option>
-            {filteredTournaments.map((t) => (
-              <option key={t._id} value={t._id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setSelectedTournament(val)}
+            options={[
+              { value: "all", label: "All Competitions" },
+              ...filteredTournaments.map((t) => ({
+                value: t._id,
+                label: t.name,
+                sub: t.type === "League" ? "Club" : "International",
+                logo: t.imageUrl,
+              })),
+            ]}
+          />
         </div>
 
         <div className="field">

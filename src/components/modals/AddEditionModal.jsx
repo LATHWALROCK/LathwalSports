@@ -5,6 +5,7 @@ import { apiConnector } from "../../services/apiConnector";
 import { leagueEndpoints } from "../../services/apis";
 import { fileToDataUrl, startYear, endYear } from "../../utils/helpers";
 import Logo from "../Logo";
+import Picklist from "../Picklist";
 import { X, Upload, Plus } from "lucide-react";
 
 export default function AddEditionModal() {
@@ -295,27 +296,25 @@ export default function AddEditionModal() {
             <div className="form-group">
               <label>Sport *</label>
               <div className="ref-select-row">
-                <select
-                  className="form-control"
+                <Picklist
+                  variant="modal"
                   value={sport}
-                  onChange={(e) => {
-                    setSport(e.target.value);
+                  onChange={(val) => {
+                    setSport(val);
                     setTournament("");
                     setWinnerId("");
                     setRunnerUpId("");
                     setParticipants([]);
                   }}
-                  required
-                >
-                  <option value="">
-                    {sports.length === 0 ? "-- No sports yet (Click '+ Create Sport') --" : "-- Select Sport --"}
-                  </option>
-                  {sports.map((s) => (
-                    <option key={s._id} value={s._id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+                  placeholder={
+                    sports.length === 0 ? "No sports yet (Click '+ Create Sport')" : "Select Sport"
+                  }
+                  options={sports.map((s) => ({
+                    value: s._id,
+                    label: s.name,
+                    logo: s.imageUrl,
+                  }))}
+                />
                 <button
                   type="button"
                   className="btn-ref-create"
@@ -334,33 +333,31 @@ export default function AddEditionModal() {
             <div className="form-group">
               <label>Competition / Tournament *</label>
               <div className="ref-select-row">
-                <select
-                  className="form-control"
+                <Picklist
+                  variant="modal"
                   value={tournament}
                   disabled={!sport}
-                  onChange={(e) => {
-                    const tid = e.target.value;
+                  onChange={(tid) => {
                     setTournament(tid);
                     setWinnerId("");
                     setRunnerUpId("");
                     setParticipants([]);
                     setSelectedParticipantId("");
                   }}
-                  required
-                >
-                  <option value="">
-                    {!sport
-                      ? "-- Select Sport First --"
+                  placeholder={
+                    !sport
+                      ? "Select Sport First"
                       : filteredTournaments.length === 0
-                      ? "-- No competitions for this sport yet --"
-                      : "-- Select Competition --"}
-                  </option>
-                  {filteredTournaments.map((t) => (
-                    <option key={t._id} value={t._id}>
-                      {t.name} ({t.type === "League" ? "Club" : "International"})
-                    </option>
-                  ))}
-                </select>
+                      ? "No competitions for this sport yet"
+                      : "Select Competition"
+                  }
+                  options={filteredTournaments.map((t) => ({
+                    value: t._id,
+                    label: t.name,
+                    sub: t.type === "League" ? "Club" : "International",
+                    logo: t.imageUrl,
+                  }))}
+                />
                 <button
                   type="button"
                   className="btn-ref-create"
@@ -397,28 +394,29 @@ export default function AddEditionModal() {
             <div className="form-group">
               <label style={{ color: "var(--gold)" }}>🏆 Champions / Winner Team *</label>
               <div className="ref-select-row">
-                <select
-                  className="form-control"
+                <Picklist
+                  variant="modal gold"
                   value={winnerId}
                   disabled={!tournament}
-                  onChange={(e) => handleWinnerChange(e.target.value)}
-                  required
-                >
-                  <option value="">
-                    {!tournament
-                      ? "-- Select Competition First --"
+                  onChange={(val) => handleWinnerChange(val)}
+                  placeholder={
+                    !tournament
+                      ? "Select Competition First"
                       : allAvailableTeams.length === 0
                       ? isClubTournament
-                        ? "-- No club teams for this competition yet --"
-                        : "-- No national teams for this sport yet --"
-                      : "-- Select Winner Team --"}
-                  </option>
-                  {allAvailableTeams.map((tm) => (
-                    <option key={tm._id} value={tm._id}>
-                      {tm.name} {tm.isCurrent ? "(Current)" : ""}
-                    </option>
-                  ))}
-                </select>
+                        ? "No club teams for this competition yet"
+                        : "No national teams for this sport yet"
+                      : "Select Winner Team"
+                  }
+                  options={allAvailableTeams.map((tm) => ({
+                    value: tm._id,
+                    label: tm.name,
+                    sub: !tm.isCurrent
+                      ? (tm.startYear ? `${tm.startYear}${tm.endYear ? `–${tm.endYear}` : ""}` : "Past Era")
+                      : "",
+                    logo: tm.imageUrl,
+                  }))}
+                />
                 <button
                   type="button"
                   className="btn-ref-create"
@@ -442,23 +440,28 @@ export default function AddEditionModal() {
             <div className="form-group">
               <label style={{ color: "var(--silver)" }}>🥈 Runner-up Team (Optional)</label>
               <div className="ref-select-row">
-                <select
-                  className="form-control"
+                <Picklist
+                  variant="modal silver"
                   value={runnerUpId}
                   disabled={!tournament}
-                  onChange={(e) => handleRunnerUpChange(e.target.value)}
-                >
-                  <option value="">
-                    {!tournament
-                      ? "-- Select Competition First --"
-                      : "-- None / Not Awarded --"}
-                  </option>
-                  {allAvailableTeams.map((tm) => (
-                    <option key={tm._id} value={tm._id}>
-                      {tm.name} {tm.isCurrent ? "(Current)" : ""}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => handleRunnerUpChange(val)}
+                  placeholder={
+                    !tournament
+                      ? "Select Competition First"
+                      : "None / Not Awarded"
+                  }
+                  options={[
+                    { value: "", label: "None / Not Awarded", sub: "Optional" },
+                    ...allAvailableTeams.map((tm) => ({
+                      value: tm._id,
+                      label: tm.name,
+                      sub: !tm.isCurrent
+                        ? (tm.startYear ? `${tm.startYear}${tm.endYear ? `–${tm.endYear}` : ""}` : "Past Era")
+                        : "",
+                      logo: tm.imageUrl,
+                    })),
+                  ]}
+                />
                 <button
                   type="button"
                   className="btn-ref-create"
@@ -484,25 +487,27 @@ export default function AddEditionModal() {
                 👥 Other Participants ({participants.length})
               </label>
               <div className="ref-select-row">
-                <select
-                  className="form-control"
+                <Picklist
+                  variant="modal"
                   value={selectedParticipantId}
                   disabled={!tournament}
-                  onChange={(e) => setSelectedParticipantId(e.target.value)}
-                >
-                  <option value="">
-                    {!tournament
-                      ? "-- Select Competition First --"
+                  onChange={(val) => setSelectedParticipantId(val)}
+                  placeholder={
+                    !tournament
+                      ? "Select Competition First"
                       : availableParticipantTeams.length === 0
-                      ? "-- No more teams to add --"
-                      : "-- Select Participant Team to Add --"}
-                  </option>
-                  {availableParticipantTeams.map((tm) => (
-                    <option key={tm._id} value={tm._id}>
-                      {tm.name} {tm.isCurrent ? "(Current)" : ""}
-                    </option>
-                  ))}
-                </select>
+                      ? "No more teams to add"
+                      : "Select Participant Team to Add"
+                  }
+                  options={availableParticipantTeams.map((tm) => ({
+                    value: tm._id,
+                    label: tm.name,
+                    sub: !tm.isCurrent
+                      ? (tm.startYear ? `${tm.startYear}${tm.endYear ? `–${tm.endYear}` : ""}` : "Past Era")
+                      : "",
+                    logo: tm.imageUrl,
+                  }))}
+                />
                 <button
                   type="button"
                   className="btn primary"

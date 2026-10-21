@@ -639,6 +639,7 @@ main {
   display: flex;
   gap: 12px;
   overflow-x: auto;
+  overflow-y: hidden;
   padding: 4px 2px 12px;
   scroll-snap-type: x mandatory;
 }
@@ -1524,6 +1525,517 @@ a.tm:hover .nm {
   border-color: var(--football);
 }
 
+/* ---------- Luxury Dark Picklist / Custom Select ---------- */
+.picklist-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.picklist-wrap.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.picklist-trigger {
+  width: 100%;
+  height: 44px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.16s ease;
+  user-select: none;
+}
+
+.picklist-trigger:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: var(--panel-2, #141c2c);
+}
+
+.picklist-trigger:focus-visible,
+.picklist-trigger.open {
+  border-color: var(--football);
+  box-shadow: 0 0 0 3px rgba(0, 227, 155, 0.14);
+  background: var(--panel-2, #141c2c);
+}
+
+.picklist-wrap.modal .picklist-trigger {
+  background: var(--panel-2);
+  padding: 0 14px;
+}
+
+.picklist-wrap.modal .picklist-trigger:hover:not(:disabled) {
+  background: var(--panel-3);
+  border-color: rgba(255, 255, 255, 0.26);
+}
+
+.picklist-wrap.modal .picklist-trigger:focus-visible,
+.picklist-wrap.modal .picklist-trigger.open {
+  background: var(--panel-3);
+}
+
+.picklist-wrap.gold .picklist-trigger:focus-visible,
+.picklist-wrap.gold .picklist-trigger.open {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(255, 178, 30, 0.16);
+}
+
+.picklist-wrap.silver .picklist-trigger:focus-visible,
+.picklist-wrap.silver .picklist-trigger.open {
+  border-color: var(--silver);
+  box-shadow: 0 0 0 3px rgba(185, 195, 214, 0.16);
+}
+
+.picklist-trigger:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.picklist-trigger-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.picklist-trigger-content .logo {
+  --s: 26px !important;
+  width: 26px !important;
+  height: 26px !important;
+  flex: 0 0 26px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  padding: 2px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.picklist-trigger-content .logo img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+.picklist-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+  color: #f8fafc;
+}
+
+.picklist-sub {
+  font-size: 11px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 7px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.picklist-placeholder {
+  color: var(--dim);
+  font-style: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.picklist-chevron {
+  color: var(--muted);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s;
+  flex-shrink: 0;
+}
+
+.picklist-chevron.open {
+  transform: rotate(180deg);
+  color: var(--football);
+}
+
+.picklist-wrap.gold .picklist-chevron.open {
+  color: var(--gold);
+}
+
+.picklist-wrap.silver .picklist-chevron.open {
+  color: var(--silver);
+}
+
+/* Floating Popover */
+.picklist-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: #111726;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 14px;
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  padding: 7px;
+  animation: picklistPopIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top center;
+  color-scheme: dark;
+  box-sizing: border-box;
+}
+
+@keyframes picklistPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Search Box inside popover */
+.picklist-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  margin-bottom: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 9px;
+  transition: border-color 0.15s;
+}
+
+.picklist-search-box:focus-within {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.picklist-search-box .search-icon {
+  color: var(--dim);
+  flex-shrink: 0;
+}
+
+.picklist-search-box input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  width: 100%;
+}
+
+.picklist-search-box input::placeholder {
+  color: var(--dim);
+}
+
+.picklist-count-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.picklist-search-box .clear-search {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.picklist-search-box .clear-search:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Options List Container */
+.picklist-options-list {
+  max-height: 270px;
+  overflow-y: auto;
+  overflow-x: hidden !important;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color-scheme: dark;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  padding-right: 3px;
+}
+
+.picklist-options-list::-webkit-scrollbar {
+  width: 5px !important;
+  height: 0px !important;
+}
+
+.picklist-options-list::-webkit-scrollbar-horizontal {
+  display: none !important;
+  height: 0px !important;
+}
+
+.picklist-options-list::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.picklist-options-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22) !important;
+  border-radius: 999px !important;
+}
+
+.picklist-options-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.38) !important;
+}
+
+.picklist-options-list::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Option Row */
+.picklist-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  font-size: 13.5px;
+  color: rgba(241, 245, 249, 0.9);
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+  user-select: none;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  margin: 1px 0;
+}
+
+.picklist-option:hover,
+.picklist-option.highlighted {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-color: rgba(255, 255, 255, 0.11);
+  color: #ffffff;
+}
+
+.picklist-option.selected {
+  background: linear-gradient(90deg, rgba(0, 227, 155, 0.16) 0%, rgba(0, 227, 155, 0.04) 100%);
+  border-color: rgba(0, 227, 155, 0.45);
+  color: #00e39b;
+  font-weight: 600;
+}
+
+.picklist-wrap.gold .picklist-option:hover,
+.picklist-wrap.gold .picklist-option.highlighted {
+  background: linear-gradient(90deg, rgba(255, 178, 30, 0.14) 0%, rgba(255, 178, 30, 0.02) 100%);
+  border-color: rgba(255, 178, 30, 0.28);
+  color: #fff;
+}
+
+.picklist-wrap.gold .picklist-option.selected {
+  background: linear-gradient(90deg, rgba(255, 178, 30, 0.18) 0%, rgba(255, 178, 30, 0.04) 100%);
+  border-color: rgba(255, 178, 30, 0.5);
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.picklist-wrap.silver .picklist-option:hover,
+.picklist-wrap.silver .picklist-option.highlighted {
+  background: linear-gradient(90deg, rgba(185, 195, 214, 0.14) 0%, rgba(185, 195, 214, 0.02) 100%);
+  border-color: rgba(185, 195, 214, 0.28);
+  color: #fff;
+}
+
+.picklist-wrap.silver .picklist-option.selected {
+  background: linear-gradient(90deg, rgba(185, 195, 214, 0.18) 0%, rgba(185, 195, 214, 0.04) 100%);
+  border-color: rgba(185, 195, 214, 0.5);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.picklist-option.disabled {
+  color: var(--dim);
+  cursor: not-allowed;
+  opacity: 0.55;
+  pointer-events: none;
+  font-style: italic;
+}
+
+/* Distinct styling for None / Reset row */
+.picklist-option.picklist-option-none {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09) !important;
+  margin-bottom: 5px !important;
+  padding-bottom: 9px !important;
+  color: var(--muted);
+}
+
+.picklist-option.picklist-option-none:hover,
+.picklist-option.picklist-option-none.highlighted {
+  color: #ffffff;
+}
+
+.picklist-none-crest {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: all 0.14s ease;
+}
+
+.picklist-option.picklist-option-none:hover .picklist-none-crest,
+.picklist-option.picklist-option-none.highlighted .picklist-none-crest {
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.picklist-none-crest.trigger-mini {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+}
+
+.picklist-initials-badge {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #e2e8f0;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.picklist-initials-badge.trigger-mini {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  font-size: 10px;
+}
+
+.picklist-option-left {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Circular Team Crest inside options */
+.picklist-option-left .logo {
+  --s: 28px !important;
+  width: 28px !important;
+  height: 28px !important;
+  flex: 0 0 28px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  padding: 2.5px !important;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease !important;
+}
+
+.picklist-option:hover .logo,
+.picklist-option.highlighted .logo {
+  transform: scale(1.1) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.picklist-option-left .logo img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+.picklist-option-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.picklist-option .opt-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+}
+
+.picklist-option .opt-sub {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.picklist-check-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 227, 155, 0.22);
+  color: #00e39b;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(0, 227, 155, 0.3);
+}
+
+.picklist-wrap.gold .picklist-check-badge {
+  background: rgba(255, 178, 30, 0.25);
+  color: var(--gold);
+  box-shadow: 0 0 10px rgba(255, 178, 30, 0.35);
+}
+
+.picklist-wrap.silver .picklist-check-badge {
+  background: rgba(185, 195, 214, 0.25);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(185, 195, 214, 0.3);
+}
+
+.picklist-empty {
+  padding: 14px 10px;
+  text-align: center;
+  color: var(--dim);
+  font-size: 13px;
+  font-style: italic;
+}
+
 .result-count {
   color: var(--muted);
   font-size: 14px;
@@ -1827,8 +2339,10 @@ textarea.form-control {
   align-items: center;
 }
 
-.ref-select-row .form-control {
+.ref-select-row .form-control,
+.ref-select-row .picklist-wrap {
   flex: 1;
+  min-width: 0;
 }
 
 .btn-ref-create {
@@ -1939,7 +2453,20 @@ textarea.form-control {
   margin-top: 10px;
   max-height: 200px;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.participants-list::-webkit-scrollbar {
+  width: 4px;
+  height: 0px;
+}
+
+.participants-list::-webkit-scrollbar-horizontal {
+  display: none !important;
+  height: 0px !important;
 }
 
 .participant-item {
@@ -2056,6 +2583,7 @@ textarea.form-control {
 .evo-timeline-wrap {
   width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   padding: 26px 14px 18px;
   background: var(--panel);
   border: 1px solid var(--line);

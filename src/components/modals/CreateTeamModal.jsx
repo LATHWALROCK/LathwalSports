@@ -4,6 +4,7 @@ import { useSports } from "../../context/SportsContext";
 import { apiConnector } from "../../services/apiConnector";
 import { teamEndpoints } from "../../services/apis";
 import { fileToDataUrl } from "../../utils/helpers";
+import Picklist from "../Picklist";
 import { X, Upload } from "lucide-react";
 
 export default function CreateTeamModal() {
@@ -180,20 +181,18 @@ export default function CreateTeamModal() {
             {/* Sport Selector */}
             <div className="form-group">
               <label htmlFor="team-sport">Sport *</label>
-              <select
+              <Picklist
                 id="team-sport"
-                className="form-control"
+                variant="modal"
                 value={sport}
-                onChange={(e) => setSport(e.target.value)}
-                required
-              >
-                <option value="">-- Select Sport --</option>
-                {sports.map((s) => (
-                  <option key={s._id} value={s._id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSport(val)}
+                placeholder="-- Select Sport --"
+                options={sports.map((s) => ({
+                  value: s._id,
+                  label: s.name,
+                  logo: s.imageUrl,
+                }))}
+              />
             </div>
 
             {/* Team Name & Common Identifier */}
@@ -254,16 +253,16 @@ export default function CreateTeamModal() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
               <div className="form-group">
                 <label>Team Type *</label>
-                <select
-                  className="form-control"
+                <Picklist
+                  variant="modal"
                   value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  required
-                >
-                  <option value="">-- Select Team Type --</option>
-                  <option value="National">National Team (Country)</option>
-                  <option value="League">Club / League Franchise</option>
-                </select>
+                  onChange={(val) => setType(val)}
+                  placeholder="-- Select Team Type --"
+                  options={[
+                    { value: "National", label: "National Team (Country)" },
+                    { value: "League", label: "Club / League Franchise" },
+                  ]}
+                />
               </div>
 
               <div className="form-group">
@@ -283,18 +282,20 @@ export default function CreateTeamModal() {
             {type === "League" && filteredTournaments.length > 0 && (
               <div className="form-group">
                 <label>Associated Competition</label>
-                <select
-                  className="form-control"
+                <Picklist
+                  variant="modal"
                   value={tournament}
-                  onChange={(e) => setTournament(e.target.value)}
-                >
-                  <option value="">-- Optional Competition Association --</option>
-                  {filteredTournaments.map((t) => (
-                    <option key={t._id} value={t._id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setTournament(val)}
+                  placeholder="Optional Competition Association"
+                  options={[
+                    { value: "", label: "None / Independent Club" },
+                    ...filteredTournaments.map((t) => ({
+                      value: t._id,
+                      label: t.name,
+                      logo: t.imageUrl,
+                    })),
+                  ]}
+                />
               </div>
             )}
 

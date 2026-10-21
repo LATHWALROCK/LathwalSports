@@ -4,6 +4,7 @@ import { useSports } from "../../context/SportsContext";
 import { apiConnector } from "../../services/apiConnector";
 import { tournamentEndpoints } from "../../services/apis";
 import { fileToDataUrl } from "../../utils/helpers";
+import Picklist from "../Picklist";
 import { X, Upload } from "lucide-react";
 
 export default function CreateTournamentModal() {
@@ -114,20 +115,18 @@ export default function CreateTournamentModal() {
             {/* Sport Selector */}
             <div className="form-group">
               <label htmlFor="comp-sport">Sport *</label>
-              <select
+              <Picklist
                 id="comp-sport"
-                className="form-control"
+                variant="modal"
                 value={sport}
-                onChange={(e) => setSport(e.target.value)}
-                required
-              >
-                <option value="">-- Select Sport --</option>
-                {sports.map((s) => (
-                  <option key={s._id} value={s._id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSport(val)}
+                placeholder="-- Select Sport --"
+                options={sports.map((s) => ({
+                  value: s._id,
+                  label: s.name,
+                  logo: s.imageUrl,
+                }))}
+              />
             </div>
 
             {/* Competition Name */}
@@ -147,17 +146,17 @@ export default function CreateTournamentModal() {
             {/* Competition Type (International or Club/League) */}
             <div className="form-group">
               <label htmlFor="comp-type">Competition Type *</label>
-              <select
+              <Picklist
                 id="comp-type"
-                className="form-control"
+                variant="modal"
                 value={type}
-                onChange={(e) => setType(e.target.value)}
-                required
-              >
-                <option value="">-- Select Competition Type --</option>
-                <option value="International">International Tournament</option>
-                <option value="League">Club / League Tournament</option>
-              </select>
+                onChange={(val) => setType(val)}
+                placeholder="-- Select Competition Type --"
+                options={[
+                  { value: "International", label: "International Tournament" },
+                  { value: "League", label: "Club / League Tournament" },
+                ]}
+              />
             </div>
 
             {/* Competition Logo */}
