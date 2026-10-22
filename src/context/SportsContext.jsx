@@ -158,13 +158,34 @@ export function SportsProvider({ children }) {
     });
   };
 
-  const openCreateTeamModal = ({ role = "winner", sportId = "", tournamentId = "", callback } = {}) => {
+  const openCreateTeamModal = ({
+    role = "winner",
+    sportId = "",
+    tournamentId = "",
+    teamIdentifier = "",
+    name = "",
+    type = "",
+    country = "",
+    city = "",
+    groupIdentifier = "",
+    groupName = "",
+    isCurrent,
+    callback,
+  } = {}) => {
     setTeamModal({
       isOpen: true,
       editingTeam: null,
       role,
       sportId: sportId || "",
       tournamentId: tournamentId || "",
+      teamIdentifier: teamIdentifier || "",
+      name: name || "",
+      type: type || "",
+      country: country || "",
+      city: city || "",
+      groupIdentifier: groupIdentifier || "",
+      groupName: groupName || "",
+      isCurrent: isCurrent !== undefined ? isCurrent : true,
       onSuccessCallback: callback || null,
     });
   };

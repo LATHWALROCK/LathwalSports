@@ -31,11 +31,16 @@ export default function TeamDetail() {
     );
   }
 
-  // All eras/versions sharing the same common teamIdentifier
-  const teamIdentifier = team.teamIdentifier || team._id;
-  const rawTeamEras = teams.filter(
-    (tm) => (tm.teamIdentifier || tm._id) === teamIdentifier
-  );
+  // All eras/versions sharing the same common teamIdentifier within the SAME sport
+  const currentSportId = team.sport?._id || team.sport ? String(team.sport?._id || team.sport) : null;
+  const teamIdentifier = String(team.teamIdentifier || team._id);
+  const rawTeamEras = teams.filter((tm) => {
+    const tmSportId = tm.sport?._id || tm.sport ? String(tm.sport?._id || tm.sport) : null;
+    const sameSport = currentSportId ? tmSportId === currentSportId : true;
+    const sameIdentifier =
+      String(tm.teamIdentifier || tm._id).toLowerCase() === teamIdentifier.toLowerCase();
+    return sameIdentifier && sameSport;
+  });
 
   // Dynamically calculate active years from tournament editions
   const teamEras = rawTeamEras
@@ -327,6 +332,14 @@ export default function TeamDetail() {
                     role: "general",
                     sportId: currentVersion.sport?._id || currentVersion.sport,
                     tournamentId: currentVersion.tournament?._id || currentVersion.tournament,
+                    teamIdentifier: currentVersion.teamIdentifier || teamIdentifier,
+                    name: currentVersion.name,
+                    type: currentVersion.type,
+                    country: currentVersion.country,
+                    city: currentVersion.city,
+                    groupIdentifier: currentVersion.groupIdentifier,
+                    groupName: currentVersion.groupName,
+                    isCurrent: false,
                   })
                 }
                 title="Add a new era version for this team"
@@ -434,9 +447,10 @@ export default function TeamDetail() {
             {groupTeams.map((member) => {
               const isOpenTeam = String(member.teamIdentifier || member._id) === currentTeamKey;
 
-              // Calculate total title wins for this team
+              // Calculate total title wins for this team across all sports
+              const memberKey = String(member.teamIdentifier || member._id).toLowerCase();
               const mEras = teams.filter(
-                (t) => (t.teamIdentifier || t._id) === (member.teamIdentifier || member._id)
+                (t) => String(t.teamIdentifier || t._id).toLowerCase() === memberKey
               );
               const mEraIds = new Set(mEras.map((t) => t._id));
               const mWins = leagues.filter((l) =>

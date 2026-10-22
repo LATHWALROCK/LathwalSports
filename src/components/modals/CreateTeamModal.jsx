@@ -34,9 +34,18 @@ export default function CreateTeamModal() {
 
   const isEditing = !!teamModal.editingTeam;
 
-  // List of existing unique common identifiers for easy selection / linkage
+  // List of existing unique common identifiers for easy selection / linkage (scoped to selected sport)
   const existingIdentifiers = Array.from(
-    new Set(teams.map((t) => t.teamIdentifier).filter(Boolean))
+    new Set(
+      teams
+        .filter((t) => {
+          if (!sport) return true;
+          const tSportId = t.sport?._id || t.sport;
+          return String(tSportId) === String(sport);
+        })
+        .map((t) => t.teamIdentifier)
+        .filter(Boolean)
+    )
   );
 
   // List of existing franchise / ownership groups for easy reuse
@@ -89,29 +98,43 @@ export default function CreateTeamModal() {
         setImageFile(null);
         setPreview(t.imageUrl || null);
       } else {
-        setName("");
-        setTeamIdentifier("");
+        setName(teamModal.name || "");
+        setTeamIdentifier(teamModal.teamIdentifier || "");
         setSport(teamModal.sportId || "");
 
         const tour = tournaments.find((t) => t._id === teamModal.tournamentId);
         if (tour) {
           setSelectedTournaments(tour.type === "League" ? [tour._id] : []);
-          setType(tour.type === "League" ? "League" : "National");
+          setType(teamModal.type || (tour.type === "League" ? "League" : "National"));
         } else {
           setSelectedTournaments([]);
-          setType("");
+          setType(teamModal.type || "");
         }
 
-        setGroupIdentifier("");
-        setGroupName("");
-        setCountry("");
-        setCity("");
+        setGroupIdentifier(teamModal.groupIdentifier || "");
+        setGroupName(teamModal.groupName || "");
+        setCountry(teamModal.country || "");
+        setCity(teamModal.city || "");
         setImageFile(null);
         setPreview(null);
-        setIsCurrent(true);
+        setIsCurrent(teamModal.isCurrent !== undefined ? teamModal.isCurrent : true);
       }
     }
-  }, [teamModal.isOpen, teamModal.editingTeam, teamModal.sportId, teamModal.tournamentId, tournaments]);
+  }, [
+    teamModal.isOpen,
+    teamModal.editingTeam,
+    teamModal.sportId,
+    teamModal.tournamentId,
+    teamModal.teamIdentifier,
+    teamModal.name,
+    teamModal.type,
+    teamModal.country,
+    teamModal.city,
+    teamModal.groupIdentifier,
+    teamModal.groupName,
+    teamModal.isCurrent,
+    tournaments,
+  ]);
 
   if (!teamModal.isOpen) return null;
 

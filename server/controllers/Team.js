@@ -84,8 +84,8 @@ exports.createTeam = async (req, res) => {
         const shouldBeCurrent = isCurrent === undefined || isCurrent === "true" || isCurrent === true;
 
         if (shouldBeCurrent) {
-            // Update older versions sharing this common identifier
-            await Team.updateMany({ teamIdentifier: cleanIdentifier }, { isCurrent: false });
+            // Update older versions sharing this common identifier in the SAME sport
+            await Team.updateMany({ teamIdentifier: cleanIdentifier, sport: cleanSport }, { isCurrent: false });
         }
 
         const team = await Team.create({
@@ -170,18 +170,28 @@ exports.getTeam = async (req, res) => {
 
 exports.getTeamTimeline = async (req, res) => {
     try {
-        const { teamIdentifier, _id } = req.query;
+        const { teamIdentifier, _id, sport } = req.query;
         let identifier = teamIdentifier;
-        if (!identifier && _id) {
+        let targetSport = sport;
+
+        if (_id) {
             const tm = await Team.findById(_id);
-            if (tm) identifier = tm.teamIdentifier;
+            if (tm) {
+                if (!identifier) identifier = tm.teamIdentifier;
+                if (!targetSport) targetSport = tm.sport;
+            }
         }
 
         if (!identifier) {
             return res.status(400).json({ success: false, message: "Team identifier is required" });
         }
 
-        const timeline = await Team.find({ teamIdentifier: identifier })
+        const query = { teamIdentifier: identifier };
+        if (targetSport) {
+            query.sport = targetSport;
+        }
+
+        const timeline = await Team.find(query)
             .populate("sport")
             .populate("tournament")
             .populate("tournaments")
@@ -383,11 +393,22 @@ exports.updateTeam = async (req, res) => {
         }
         if (isCurrent !== undefined) {
             updateData.isCurrent = isCurrent === "true" || isCurrent === true;
-            if (updateData.isCurrent && updateData.teamIdentifier) {
-                await Team.updateMany(
-                    { teamIdentifier: updateData.teamIdentifier, _id: { $ne: _id } },
-                    { isCurrent: false }
-                );
+            if (updateData.isCurrent) {
+                const targetIdentifier = updateData.teamIdentifier;
+                if (targetIdentifier) {
+                    await Team.updateMany(
+                        { teamIdentifier: targetIdentifier, sport: cleanSport, _id: { $ne: _id } },
+                        { isCurrent: false }
+                    );
+                } else {
+                    const existingTeam = await Team.findById(_id);
+                    if (existingTeam && existingTeam.teamIdentifier) {
+                        await Team.updateMany(
+                            { teamIdentifier: existingTeam.teamIdentifier, sport: cleanSport, _id: { $ne: _id } },
+                            { isCurrent: false }
+                        );
+                    }
+                }
             }
         }
 
