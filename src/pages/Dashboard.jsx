@@ -81,18 +81,18 @@ export default function Dashboard() {
             <b>{sports.length}</b>
             <span>Sports</span>
           </div>
-          <div className="stat">
+          <Link to="/tournaments" className="stat" style={{ cursor: "pointer", transition: "transform 0.15s ease" }} title="Explore all competitions directory">
             <b>{tournaments.length}</b>
-            <span>Competitions</span>
-          </div>
+            <span>Competitions →</span>
+          </Link>
           <div className="stat">
             <b>{leagues.length}</b>
             <span>Editions</span>
           </div>
-          <div className="stat">
+          <Link to="/teams" className="stat" style={{ cursor: "pointer", transition: "transform 0.15s ease" }} title="Explore all teams directory">
             <b>{teams.length}</b>
-            <span>Teams</span>
-          </div>
+            <span>Teams →</span>
+          </Link>
         </div>
 
         {heroCrests.length > 0 && <div className="hero-crests">{heroCrests}</div>}

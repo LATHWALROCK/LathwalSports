@@ -7,6 +7,8 @@ import Dashboard from "./pages/Dashboard";
 import CompetitionDetail from "./pages/CompetitionDetail";
 import TeamDetail from "./pages/TeamDetail";
 import Explore from "./pages/Explore";
+import Teams from "./pages/Teams";
+import Tournaments from "./pages/Tournaments";
 
 // Modals
 import AddEditionModal from "./components/modals/AddEditionModal";
@@ -27,12 +29,16 @@ function AppContent() {
         <div className="wrap">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/tournaments" element={<Tournaments />} />
+            <Route path="/competitions" element={<Navigate to="/tournaments" replace />} />
             <Route path="/competition/:id" element={<CompetitionDetail />} />
             <Route path="/c/:id" element={<CompetitionDetail />} />
             <Route path="/team/:id" element={<TeamDetail />} />
+            <Route path="/teams" element={<Teams />} />
+            <Route path="/all-teams" element={<Navigate to="/teams" replace />} />
             <Route path="/explore" element={<Explore />} />
             {/* Legacy route fallbacks */}
-            <Route path="/tournament" element={<Navigate to="/" replace />} />
+            <Route path="/tournament" element={<Navigate to="/tournaments" replace />} />
             <Route path="/leagues" element={<Navigate to="/explore" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

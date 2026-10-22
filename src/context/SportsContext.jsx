@@ -35,7 +35,6 @@ export function SportsProvider({ children }) {
     setIsAdmin((prev) => {
       const next = !prev;
       localStorage.setItem("lathwal_admin_mode", String(next));
-      toast.success(next ? "Switched to Admin View" : "Switched to Normal View");
       return next;
     });
   };
