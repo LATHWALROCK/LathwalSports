@@ -551,7 +551,8 @@ function Tournament() {
               leagueTournaments.map((tournament) => {
                 // Find teams for this specific tournament
                 const tournamentTeams = teamsData.filter(team =>
-                  team.tournament && team.tournament._id === tournament._id
+                  (team.tournament && (team.tournament._id || team.tournament) === tournament._id) ||
+                  (Array.isArray(team.tournaments) && team.tournaments.some(t => (t?._id || t) === tournament._id))
                 );
 
                 return (

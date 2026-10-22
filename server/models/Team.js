@@ -46,6 +46,23 @@ const teamSchema = new mongoose.Schema(
       ref: "tournament",
       required: false,
     },
+    tournaments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "tournament",
+      },
+    ],
+    groupIdentifier: {
+      type: String,
+      required: false,
+      trim: true,
+      index: true,
+    },
+    groupName: {
+      type: String,
+      required: false,
+      trim: true,
+    },
   },
   { timestamps: true }
 );

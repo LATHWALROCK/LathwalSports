@@ -425,19 +425,30 @@ function Team() {
     if (team.type === "National") {
       acc[sportId].nationalTeams.push(team);
     } else {
-      // League teams grouped by tournament
-      const tournamentObj = team?.tournament || {};
-      const tournamentId = tournamentObj?._id || "no-tournament";
-      const tournamentName = tournamentObj?.name || "Miscellaneous";
+      // League teams grouped by tournament(s)
+      const allTournaments = Array.isArray(team?.tournaments) && team.tournaments.length > 0
+        ? team.tournaments
+        : team?.tournament
+        ? [team.tournament]
+        : [];
 
-      if (!acc[sportId].tournaments[tournamentId]) {
-        acc[sportId].tournaments[tournamentId] = {
-          tournamentName,
-          teams: [],
-        };
+      if (allTournaments.length === 0) {
+        const tournamentId = "no-tournament";
+        const tournamentName = "Independent / Unassociated";
+        if (!acc[sportId].tournaments[tournamentId]) {
+          acc[sportId].tournaments[tournamentId] = { tournamentName, teams: [] };
+        }
+        acc[sportId].tournaments[tournamentId].teams.push(team);
+      } else {
+        allTournaments.forEach((tournamentObj) => {
+          const tournamentId = tournamentObj?._id || tournamentObj;
+          const tournamentName = tournamentObj?.name || "Competition";
+          if (!acc[sportId].tournaments[tournamentId]) {
+            acc[sportId].tournaments[tournamentId] = { tournamentName, teams: [] };
+          }
+          acc[sportId].tournaments[tournamentId].teams.push(team);
+        });
       }
-
-      acc[sportId].tournaments[tournamentId].teams.push(team);
     }
 
     return acc;

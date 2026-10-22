@@ -5,6 +5,7 @@ import { apiConnector } from "../../services/apiConnector";
 import { teamEndpoints } from "../../services/apis";
 import { fileToDataUrl } from "../../utils/helpers";
 import Picklist from "../Picklist";
+import Logo from "../Logo";
 import { X, Upload } from "lucide-react";
 
 export default function CreateTeamModal() {
@@ -24,7 +25,9 @@ export default function CreateTeamModal() {
   const [type, setType] = useState(""); // empty initially, no preselection
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
-  const [tournament, setTournament] = useState("");
+  const [selectedTournaments, setSelectedTournaments] = useState([]);
+  const [groupIdentifier, setGroupIdentifier] = useState("");
+  const [groupName, setGroupName] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -34,6 +37,23 @@ export default function CreateTeamModal() {
   // List of existing unique common identifiers for easy selection / linkage
   const existingIdentifiers = Array.from(
     new Set(teams.map((t) => t.teamIdentifier).filter(Boolean))
+  );
+
+  // List of existing franchise / ownership groups for easy reuse
+  const existingGroups = Array.from(
+    new Map(
+      teams
+        .filter((t) => t.groupIdentifier || t.groupName)
+        .map((t) => {
+          const id =
+            t.groupIdentifier ||
+            (t.groupName
+              ? t.groupName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+              : "");
+          const gName = t.groupName || t.groupIdentifier;
+          return [id, { id, name: gName }];
+        })
+    ).values()
   );
 
   useEffect(() => {
@@ -46,7 +66,25 @@ export default function CreateTeamModal() {
         setType(t.type || "National");
         setCountry(t.country || "");
         setCity(t.city || "");
-        setTournament(t.tournament?._id || t.tournament || "");
+
+        // Multi-tournament extraction
+        const tourIds = [];
+        if (Array.isArray(t.tournaments) && t.tournaments.length > 0) {
+          t.tournaments.forEach((tour) => {
+            const id = tour?._id || tour;
+            if (id && !tourIds.includes(id)) tourIds.push(id);
+          });
+        }
+        const singleId = t.tournament?._id || t.tournament;
+        if (singleId && !tourIds.includes(singleId)) {
+          tourIds.push(singleId);
+        }
+        setSelectedTournaments(tourIds);
+
+        // Group / Franchise family
+        setGroupIdentifier(t.groupIdentifier || "");
+        setGroupName(t.groupName || "");
+
         setIsCurrent(t.isCurrent !== undefined ? !!t.isCurrent : true);
         setImageFile(null);
         setPreview(t.imageUrl || null);
@@ -54,14 +92,18 @@ export default function CreateTeamModal() {
         setName("");
         setTeamIdentifier("");
         setSport(teamModal.sportId || "");
+
         const tour = tournaments.find((t) => t._id === teamModal.tournamentId);
         if (tour) {
-          setTournament(tour.type === "League" ? tour._id : "");
+          setSelectedTournaments(tour.type === "League" ? [tour._id] : []);
           setType(tour.type === "League" ? "League" : "National");
         } else {
-          setTournament("");
+          setSelectedTournaments([]);
           setType("");
         }
+
+        setGroupIdentifier("");
+        setGroupName("");
         setCountry("");
         setCity("");
         setImageFile(null);
@@ -125,7 +167,26 @@ export default function CreateTeamModal() {
       formData.append("type", type);
       if (country) formData.append("country", country.trim());
       if (city) formData.append("city", city.trim());
-      if (tournament) formData.append("tournament", tournament);
+
+      // Multiple tournaments + primary backward compatibility
+      formData.append("tournaments", JSON.stringify(selectedTournaments));
+      if (selectedTournaments.length > 0) {
+        formData.append("tournament", selectedTournaments[0]);
+      } else {
+        formData.append("tournament", "");
+      }
+
+      // Franchise / Ownership Group
+      if (groupIdentifier.trim()) {
+        formData.append(
+          "groupIdentifier",
+          groupIdentifier.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+        );
+      }
+      if (groupName.trim()) {
+        formData.append("groupName", groupName.trim());
+      }
+
       if (imageFile) formData.append("image", imageFile);
 
       const endpoint = isEditing ? teamEndpoints.UPDATE_TEAM : teamEndpoints.CREATE_TEAM;
@@ -161,6 +222,10 @@ export default function CreateTeamModal() {
     (t) => !sport || (t.sport?._id || t.sport) === sport
   );
 
+  const availableTournamentsToAdd = filteredTournaments.filter(
+    (t) => !selectedTournaments.includes(t._id)
+  );
+
   return (
     <div className="modal-overlay sub-modal" onClick={closeCreateTeamModal}>
       <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
@@ -185,8 +250,17 @@ export default function CreateTeamModal() {
                 id="team-sport"
                 variant="modal"
                 value={sport}
-                onChange={(val) => setSport(val)}
-                placeholder="-- Select Sport --"
+                onChange={(val) => {
+                  setSport(val);
+                  // Clear tournaments not matching new sport
+                  setSelectedTournaments((prev) =>
+                    prev.filter((tid) => {
+                      const tour = tournaments.find((t) => t._id === tid);
+                      return tour && (tour.sport?._id || tour.sport) === val;
+                    })
+                  );
+                }}
+                placeholder="Select Sport"
                 options={sports.map((s) => ({
                   value: s._id,
                   label: s.name,
@@ -203,7 +277,7 @@ export default function CreateTeamModal() {
                   id="team-name"
                   className="form-control"
                   type="text"
-                  placeholder="e.g. Delhi Capitals, Real Madrid, RCB…"
+                  placeholder="e.g. Delhi Capitals, Real Madrid, MI New York…"
                   value={name}
                   onChange={(e) => {
                     setName(e.target.value);
@@ -218,12 +292,12 @@ export default function CreateTeamModal() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="team-identifier">Common Identifier *</label>
+                <label htmlFor="team-identifier">Common Identifier (Era Linking) *</label>
                 <input
                   id="team-identifier"
                   className="form-control"
                   type="text"
-                  placeholder="e.g. delhi-capitals, rcb, real-madrid"
+                  placeholder="e.g. delhi-capitals, mi-new-york"
                   value={teamIdentifier}
                   onChange={(e) => setTeamIdentifier(e.target.value)}
                   list="existing-team-identifiers"
@@ -257,7 +331,7 @@ export default function CreateTeamModal() {
                   variant="modal"
                   value={type}
                   onChange={(val) => setType(val)}
-                  placeholder="-- Select Team Type --"
+                  placeholder="Select Team Type"
                   options={[
                     { value: "National", label: "National Team (Country)" },
                     { value: "League", label: "Club / League Franchise" },
@@ -279,25 +353,126 @@ export default function CreateTeamModal() {
               </div>
             </div>
 
-            {type === "League" && filteredTournaments.length > 0 && (
+            {/* Associated Competitions (Multiple Allowed for Club Teams) */}
+            {type === "League" && (
               <div className="form-group">
-                <label>Associated Competition</label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                  <label style={{ margin: 0 }}>Associated Competitions (Multiple Allowed)</label>
+                  <span style={{ fontSize: "12px", color: "var(--muted)" }}>
+                    {selectedTournaments.length} {selectedTournaments.length === 1 ? "competition" : "competitions"} selected
+                  </span>
+                </div>
+
                 <Picklist
                   variant="modal"
-                  value={tournament}
-                  onChange={(val) => setTournament(val)}
-                  placeholder="Optional Competition Association"
-                  options={[
-                    { value: "", label: "None / Independent Club" },
-                    ...filteredTournaments.map((t) => ({
-                      value: t._id,
-                      label: t.name,
-                      logo: t.imageUrl,
-                    })),
-                  ]}
+                  value=""
+                  onChange={(val) => {
+                    if (val && !selectedTournaments.includes(val)) {
+                      setSelectedTournaments((prev) => [...prev, val]);
+                    }
+                  }}
+                  placeholder={
+                    filteredTournaments.length === 0
+                      ? "No competitions created for this sport yet"
+                      : availableTournamentsToAdd.length === 0
+                      ? "All sport competitions already added"
+                      : "+ Select & Add Competition..."
+                  }
+                  options={availableTournamentsToAdd.map((t) => ({
+                    value: t._id,
+                    label: t.name,
+                    logo: t.imageUrl,
+                  }))}
+                  disabled={availableTournamentsToAdd.length === 0}
                 />
+
+                {selectedTournaments.length > 0 && (
+                  <div className="comp-tags-container">
+                    {selectedTournaments.map((tId) => {
+                      const tDoc = tournaments.find((t) => t._id === tId);
+                      return (
+                        <span key={tId} className="comp-tag-pill">
+                          {tDoc?.imageUrl && (
+                            <Logo url={tDoc.imageUrl} label={tDoc.name} size="xs" />
+                          )}
+                          <span className="comp-tag-name">{tDoc?.name || "Competition"}</span>
+                          <button
+                            type="button"
+                            className="btn-remove-tag"
+                            onClick={() => setSelectedTournaments((prev) => prev.filter((id) => id !== tId))}
+                            title="Remove competition association"
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
+
+            {/* Franchise / Ownership Group Section */}
+            <div className="form-group-card">
+              <div className="form-group-card-header">
+                <span className="card-icon">🌐</span>
+                <div>
+                  <label style={{ margin: 0, fontWeight: 600 }}>Franchise / Ownership Group (Optional)</label>
+                  <small style={{ color: "var(--muted)", display: "block" }}>
+                    Link sister teams under the same owner/network (e.g. MI Family, City Football Group, Red Bull)
+                  </small>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "10px" }}>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label htmlFor="group-name" style={{ fontSize: "12px" }}>Group Display Name</label>
+                  <input
+                    id="group-name"
+                    className="form-control"
+                    type="text"
+                    placeholder="e.g. MI Family, City Football Group"
+                    value={groupName}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setGroupName(val);
+                      const matched = existingGroups.find((g) => g.name.toLowerCase() === val.toLowerCase());
+                      if (matched) {
+                        setGroupIdentifier(matched.id);
+                      } else if (!groupIdentifier || groupIdentifier === groupName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")) {
+                        setGroupIdentifier(val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+                      }
+                    }}
+                    list="existing-group-names"
+                  />
+                  <datalist id="existing-group-names">
+                    {existingGroups.map((g) => (
+                      <option key={g.id} value={g.name} />
+                    ))}
+                  </datalist>
+                </div>
+
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label htmlFor="group-identifier" style={{ fontSize: "12px" }}>Group Identifier (Slug)</label>
+                  <input
+                    id="group-identifier"
+                    className="form-control"
+                    type="text"
+                    placeholder="e.g. mi-family, city-football-group"
+                    value={groupIdentifier}
+                    onChange={(e) => setGroupIdentifier(e.target.value)}
+                    list="existing-group-identifiers"
+                  />
+                  <datalist id="existing-group-identifiers">
+                    {existingGroups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+            </div>
 
             {/* Team Crest / Logo */}
             <div className="form-group">

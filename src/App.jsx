@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { SportsProvider } from "./context/SportsContext";
 import Topbar from "./components/Topbar";
+import ScrollToTop from "./components/ScrollToTop";
 import Dashboard from "./pages/Dashboard";
 import CompetitionDetail from "./pages/CompetitionDetail";
 import TeamDetail from "./pages/TeamDetail";
@@ -19,6 +20,7 @@ import "./App.css";
 function AppContent() {
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      <ScrollToTop />
       <Topbar />
 
       <main style={{ flex: 1 }}>

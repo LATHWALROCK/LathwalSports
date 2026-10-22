@@ -4,7 +4,19 @@ const cloudinary = require("cloudinary").v2;
 
 exports.createTeam = async (req, res) => {
     try {
-        const { name, teamIdentifier, isCurrent, city, country, sport, type, tournament } = req.body;
+        const {
+            name,
+            teamIdentifier,
+            isCurrent,
+            city,
+            country,
+            sport,
+            type,
+            tournament,
+            tournaments,
+            groupIdentifier,
+            groupName,
+        } = req.body;
         let imageUrl = req.body.imageUrl || "";
         const file = req.files?.image;
 
@@ -29,6 +41,33 @@ exports.createTeam = async (req, res) => {
         const cleanCity = city && city.trim() ? city.trim() : null;
         const cleanCountry = country && country.trim() ? country.trim() : null;
         const cleanTournament = tournament && tournament.trim() ? tournament.trim() : null;
+
+        // Clean tournaments array
+        let cleanTournaments = [];
+        if (tournaments) {
+            if (Array.isArray(tournaments)) {
+                cleanTournaments = tournaments.filter(Boolean);
+            } else if (typeof tournaments === "string") {
+                try {
+                    const parsed = JSON.parse(tournaments);
+                    if (Array.isArray(parsed)) cleanTournaments = parsed.filter(Boolean);
+                    else if (tournaments.trim()) cleanTournaments = [tournaments.trim()];
+                } catch (e) {
+                    cleanTournaments = tournaments.split(",").map((s) => s.trim()).filter(Boolean);
+                }
+            }
+        }
+        if (cleanTournament && !cleanTournaments.includes(cleanTournament)) {
+            cleanTournaments.push(cleanTournament);
+        }
+
+        // Clean Group / Ownership details
+        const cleanGroupIdentifier = groupIdentifier && groupIdentifier.trim()
+            ? groupIdentifier.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+            : groupName && groupName.trim()
+            ? groupName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+            : undefined;
+        const cleanGroupName = groupName && groupName.trim() ? groupName.trim() : undefined;
 
         if (!cleanName || !cleanSport) {
             return res.status(403).json({
@@ -58,7 +97,10 @@ exports.createTeam = async (req, res) => {
             country: cleanCountry || undefined,
             sport: cleanSport,
             type: cleanType,
-            tournament: cleanTournament || undefined,
+            tournament: cleanTournament || (cleanTournaments.length > 0 ? cleanTournaments[0] : undefined),
+            tournaments: cleanTournaments,
+            groupIdentifier: cleanGroupIdentifier,
+            groupName: cleanGroupName,
         });
 
         return res.status(200).json({
@@ -80,6 +122,7 @@ exports.getTeam = async (req, res) => {
         const teams = await Team.find({})
             .populate("sport")
             .populate("tournament")
+            .populate("tournaments")
             .sort({ isCurrent: -1, name: 1 })
             .lean();
 
@@ -141,6 +184,7 @@ exports.getTeamTimeline = async (req, res) => {
         const timeline = await Team.find({ teamIdentifier: identifier })
             .populate("sport")
             .populate("tournament")
+            .populate("tournaments")
             .lean();
 
         // Calculate active years dynamically for each era based on tournament editions
@@ -186,11 +230,14 @@ exports.getTeamBySportAndTournament = async (req, res) => {
         const { sport, tournament } = req.query;
         const query = {};
         if (sport) query.sport = sport;
-        if (tournament) query.tournament = tournament;
+        if (tournament) {
+            query.$or = [{ tournament: tournament }, { tournaments: tournament }];
+        }
 
         const teams = await Team.find(query)
             .populate("sport")
             .populate("tournament")
+            .populate("tournaments")
             .sort({ isCurrent: -1, name: 1 });
 
         res.status(200).json({
@@ -214,6 +261,7 @@ exports.getTeamBySport = async (req, res) => {
         const teams = await Team.find({ sport })
             .populate("sport")
             .populate("tournament")
+            .populate("tournaments")
             .sort({ isCurrent: -1, name: 1 });
 
         res.status(200).json({
@@ -260,7 +308,20 @@ exports.deleteTeam = async (req, res) => {
 
 exports.updateTeam = async (req, res) => {
     try {
-        const { _id, name, teamIdentifier, isCurrent, city, country, sport, type, tournament } = req.body;
+        const {
+            _id,
+            name,
+            teamIdentifier,
+            isCurrent,
+            city,
+            country,
+            sport,
+            type,
+            tournament,
+            tournaments,
+            groupIdentifier,
+            groupName,
+        } = req.body;
         const file = req.files?.image;
 
         if (!_id || !name || !sport) {
@@ -283,6 +344,40 @@ exports.updateTeam = async (req, res) => {
             tournament: tournament ? tournament.trim() : undefined,
         };
 
+        // Handle tournaments array
+        if (tournaments !== undefined) {
+            let cleanTournaments = [];
+            if (Array.isArray(tournaments)) {
+                cleanTournaments = tournaments.filter(Boolean);
+            } else if (typeof tournaments === "string") {
+                try {
+                    const parsed = JSON.parse(tournaments);
+                    if (Array.isArray(parsed)) cleanTournaments = parsed.filter(Boolean);
+                    else if (tournaments.trim()) cleanTournaments = [tournaments.trim()];
+                } catch (e) {
+                    cleanTournaments = tournaments.split(",").map((s) => s.trim()).filter(Boolean);
+                }
+            }
+            if (updateData.tournament && !cleanTournaments.includes(updateData.tournament)) {
+                cleanTournaments.push(updateData.tournament);
+            }
+            updateData.tournaments = cleanTournaments;
+            if (!updateData.tournament && cleanTournaments.length > 0) {
+                updateData.tournament = cleanTournaments[0];
+            }
+        }
+
+        // Handle Group / Ownership details
+        if (groupIdentifier !== undefined || groupName !== undefined) {
+            const gId = groupIdentifier && groupIdentifier.trim()
+                ? groupIdentifier.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+                : groupName && groupName.trim()
+                ? groupName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+                : null;
+            updateData.groupIdentifier = gId || undefined;
+            updateData.groupName = groupName && groupName.trim() ? groupName.trim() : (gId || undefined);
+        }
+
         if (teamIdentifier) {
             updateData.teamIdentifier = teamIdentifier.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
         }
@@ -303,7 +398,10 @@ exports.updateTeam = async (req, res) => {
             updateData.imageUrl = result.secure_url;
         }
 
-        const updatedTeam = await Team.findByIdAndUpdate(_id, updateData, { new: true, runValidators: true });
+        const updatedTeam = await Team.findByIdAndUpdate(_id, updateData, { new: true, runValidators: true })
+            .populate("sport")
+            .populate("tournament")
+            .populate("tournaments");
 
         if (!updatedTeam) {
             return res.status(404).json({
@@ -339,6 +437,7 @@ exports.getTeamById = async (req, res) => {
         const team = await Team.findById(_id)
             .populate("sport")
             .populate("tournament")
+            .populate("tournaments")
             .lean();
 
         if (!team) {
@@ -389,6 +488,7 @@ exports.getTeamsByCityAndSport = async (req, res) => {
         const teams = await Team.find({ city, sport, type: "League" })
             .populate("sport")
             .populate("tournament")
+            .populate("tournaments")
             .sort({ name: 1 });
 
         res.status(200).json({
@@ -419,6 +519,7 @@ exports.getTeamsByCountryAndSport = async (req, res) => {
         const teams = await Team.find({ country, sport, type: "National" })
             .populate("sport")
             .populate("tournament")
+            .populate("tournaments")
             .sort({ name: 1 });
 
         res.status(200).json({

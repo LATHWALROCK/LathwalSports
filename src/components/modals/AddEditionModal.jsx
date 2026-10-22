@@ -115,8 +115,12 @@ export default function AddEditionModal() {
         if (sport && (tm.sport?._id || tm.sport) !== sport) return false;
 
         if (isClubTournament) {
-          // Club: show teams for selected tournament only
-          return (tm.tournament?._id || tm.tournament) === tournament;
+          // Club: show teams associated with the selected competition (single or multiple)
+          return (
+            (tm.tournament?._id || tm.tournament) === tournament ||
+            (Array.isArray(tm.tournaments) &&
+              tm.tournaments.some((t) => (t?._id || t) === tournament))
+          );
         } else {
           // International / National: show all national teams for the selected sport
           return tm.type === "National";

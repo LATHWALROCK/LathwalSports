@@ -131,7 +131,50 @@ export default function TeamDetail() {
     (a, b) => b.wins.length - a.wins.length || b.editions.length - a.editions.length
   );
 
-  const latestTitle = titleWins.sort((a, b) => (b.year || 0) - (a.year || 0))[0];
+  // Group / Franchise family
+  const currentGroupId = currentVersion.groupIdentifier;
+  const currentGroupName = currentVersion.groupName || currentGroupId;
+
+  // All teams belonging to the same franchise group (including current team)
+  const rawGroupTeams = currentGroupId
+    ? teams.filter(
+        (t) =>
+          t.groupIdentifier &&
+          t.groupIdentifier.toLowerCase() === currentGroupId.toLowerCase()
+      )
+    : [];
+
+  const currentTeamKey = String(teamIdentifier);
+
+  // Group by teamIdentifier and pick their active/current era
+  const groupTeamsMap = new Map();
+  rawGroupTeams.forEach((t) => {
+    const sId = String(t.teamIdentifier || t._id);
+    if (!groupTeamsMap.has(sId) || t.isCurrent) {
+      groupTeamsMap.set(sId, t);
+    }
+  });
+
+  // Ensure currentVersion is included in the map
+  groupTeamsMap.set(currentTeamKey, currentVersion);
+
+  // Sort so the currently open team is first, followed by sister teams alphabetically
+  const groupTeams = Array.from(groupTeamsMap.values()).sort((a, b) => {
+    const isACurrent = String(a.teamIdentifier || a._id) === currentTeamKey;
+    const isBCurrent = String(b.teamIdentifier || b._id) === currentTeamKey;
+    if (isACurrent) return -1;
+    if (isBCurrent) return 1;
+    return (a.name || "").localeCompare(b.name || "");
+  });
+
+  // Associated competitions for this team
+  const associatedTournaments = Array.isArray(currentVersion.tournaments) && currentVersion.tournaments.length > 0
+    ? currentVersion.tournaments
+    : currentVersion.tournament
+    ? [currentVersion.tournament]
+    : [];
+
+  const latestTitle = titleWins.slice().sort((a, b) => (b.year || 0) - (a.year || 0))[0];
 
   return (
     <div>
@@ -181,10 +224,39 @@ export default function TeamDetail() {
             <span className="pill">
               {currentVersion.type === "National" ? "National Team" : "Club / League"}
             </span>
+            {currentGroupId && (
+              <span className="pill gold" title={`Belongs to ${currentGroupName} network`}>
+                🌐 {currentGroupName}
+              </span>
+            )}
             <span className="pill" style={{ letterSpacing: "0.5px" }}>
               ID: {teamIdentifier}
             </span>
           </div>
+
+          {/* Associated Competitions Pills */}
+          {associatedTournaments.length > 0 && (
+            <div className="team-associated-comps" style={{ marginTop: "10px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "12px", color: "var(--muted)", marginRight: "2px" }}>
+                Associated Competitions:
+              </span>
+              {associatedTournaments.map((tObj) => {
+                const tourData = tournaments.find((t) => t._id === (tObj._id || tObj)) || tObj;
+                return (
+                  <Link
+                    key={tourData._id || tourData.name}
+                    to={`/competition/${tourData._id}`}
+                    className="comp-link-pill"
+                  >
+                    {tourData.imageUrl && (
+                      <Logo url={tourData.imageUrl} label={tourData.name} size="xs" />
+                    )}
+                    <span>{tourData.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
 
           <div className="kpis">
             <div className="kpi">
@@ -336,6 +408,131 @@ export default function TeamDetail() {
                 );
               })}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Franchise Group & Sister Teams Section */}
+      {currentGroupId && groupTeams.length > 1 && (
+        <div className="section">
+          <div className="section-head">
+            <div>
+              <h2>
+                <span className="bar" />
+                {currentGroupName} · Sister Teams
+              </h2>
+              <p>
+                Affiliated clubs belonging to the <strong>{currentGroupName}</strong> global franchise network
+              </p>
+            </div>
+            <span className="pill gold" style={{ fontSize: "12px", padding: "4px 12px" }}>
+              🌐 {groupTeams.length} Clubs in Group
+            </span>
+          </div>
+
+          <div className="sister-teams-grid">
+            {groupTeams.map((member) => {
+              const isOpenTeam = String(member.teamIdentifier || member._id) === currentTeamKey;
+
+              // Calculate total title wins for this team
+              const mEras = teams.filter(
+                (t) => (t.teamIdentifier || t._id) === (member.teamIdentifier || member._id)
+              );
+              const mEraIds = new Set(mEras.map((t) => t._id));
+              const mWins = leagues.filter((l) =>
+                l.teams?.some(
+                  (t) =>
+                    mEraIds.has(t.team?._id || t.team) &&
+                    (t.position === 1 || (l.shared && t.position === 2))
+                )
+              );
+
+              // Competitions member belongs to
+              const mTournaments = Array.isArray(member.tournaments) && member.tournaments.length > 0
+                ? member.tournaments
+                : member.tournament
+                ? [member.tournament]
+                : [];
+
+              const cardContent = (
+                <>
+                  <div className="sister-crest-wrap">
+                    <Logo url={member.imageUrl} label={member.name} size="xl" />
+                  </div>
+
+                  <div className="sister-info">
+                    {isOpenTeam && (
+                      <span className="sister-current-badge">
+                        📍 Current Team
+                      </span>
+                    )}
+
+                    <h3 className="sister-name">{member.name}</h3>
+
+                    <div className="sister-meta-row">
+                      <span className="sister-sport-pill">
+                        {member.sport?.name || "Sport"}
+                      </span>
+                      {member.city || member.country ? (
+                        <span className="sister-loc">
+                          📍 {member.city ? `${member.city}${member.country ? `, ${member.country}` : ""}` : member.country}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {/* Associated Competitions */}
+                    {mTournaments.length > 0 && (
+                      <div className="sister-comps">
+                        {mTournaments.map((tObj) => {
+                          const tData = tournaments.find((t) => t._id === (tObj._id || tObj)) || tObj;
+                          return (
+                            <span key={tData._id || tData.name} className="sister-comp-badge">
+                              {tData.imageUrl && (
+                                <Logo url={tData.imageUrl} label={tData.name} size="xs" />
+                              )}
+                              <span>{tData.name}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {mWins.length > 0 ? (
+                      <div className="sister-honour">
+                        🏆 {mWins.length} {mWins.length === 1 ? "Title" : "Titles"}
+                      </div>
+                    ) : (
+                      <div className="sister-honour empty">
+                        No titles recorded
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={`sister-arrow ${isOpenTeam ? "current" : ""}`}>
+                    <span>{isOpenTeam ? "● Viewing Now" : "View Team →"}</span>
+                  </div>
+                </>
+              );
+
+              return isOpenTeam ? (
+                <div
+                  key={member._id}
+                  className="sister-team-card current-open-team"
+                  title={`${member.name} (Currently viewing this team)`}
+                >
+                  {cardContent}
+                </div>
+              ) : (
+                <Link
+                  key={member._id}
+                  to={`/team/${member._id}`}
+                  className="sister-team-card"
+                  title={`View ${member.name}`}
+                >
+                  {cardContent}
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}
