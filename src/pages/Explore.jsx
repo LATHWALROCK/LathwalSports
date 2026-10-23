@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useSports } from "../context/SportsContext";
 import Logo from "../components/Logo";
 import Picklist from "../components/Picklist";
-import { Edit2, Trash2 } from "lucide-react";
+import { Edit2, Trash2, Trophy, Medal, Users } from "lucide-react";
 
 export default function Explore() {
   const {
@@ -174,157 +174,202 @@ export default function Explore() {
         )}
       </div>
 
-      {/* Results Table */}
-      {filteredEditions.length > 0 ? (
-        <div className="editions-showcase">
+      {/* Results Grid */}
+      {displayedEditions.length > 0 ? (
+        <div className="tournaments-grid">
           {displayedEditions.map((edition) => {
             const tour = edition.tournament;
+            const isLeague = tour?.type === "League";
             const winPos = edition.teams?.find((t) => t.position === 1);
-            const ruPos = edition.teams?.find((t) => t.position === 2);
-            const winTeam = winPos?.team;
-            const ruTeam = ruPos?.team;
-            const otherParticipants = (edition.teams || []).filter(
-              (t) =>
-                t.position !== 1 &&
-                t.position !== 2 &&
-                (t.team?._id || t.team) !== (winTeam?._id || winTeam) &&
-                (t.team?._id || t.team) !== (ruTeam?._id || ruTeam)
-            );
+            const ruPos = edition.shared
+              ? (edition.teams?.filter((t) => t.position === 1)[1] || edition.teams?.find((t) => t.position === 2))
+              : edition.teams?.find((t) => t.position === 2);
+            const winTeam = winPos?.team && typeof winPos.team === "object" ? winPos.team : null;
+            const ruTeam = ruPos?.team && typeof ruPos.team === "object" ? ruPos.team : null;
+            const totalParticipants = (edition.teams || []).length;
 
             return (
-              <div className="edition-card" key={edition._id}>
-                {/* Card Header: Year, Competition Tag, Shared Tag, Actions */}
-                <div className="edition-card-top">
-                  <div className="edition-title-cluster">
+              <div key={edition._id} className="tournament-directory-card">
+                {/* Card Top: Edition Logo & Badges */}
+                <div className="tournament-card-top">
+                  <div className="tournament-card-crest-box">
                     <Logo
                       url={edition.leagueImageUrl || tour?.imageUrl}
                       label={edition.name}
-                      size="md"
+                      size="xl"
                     />
-                    <div className="edition-heading">
-                      <span className="edition-year-badge">
-                        {edition.season || edition.year}
+                  </div>
+
+                  <div className="tournament-card-badges">
+                    {isAdmin && (
+                      <div className="edition-admin-actions">
+                        <button
+                          type="button"
+                          className="btn-icon"
+                          title="Edit edition"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openEditEditionModal(edition);
+                          }}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-icon del"
+                          title="Delete edition"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openDeleteConfirmModal(edition);
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )}
+                    <span className="tournament-editions-badge">
+                      {edition.season || edition.year}
+                    </span>
+                    {tour && (
+                      <span className={`tournament-type-badge ${isLeague ? "league" : "international"}`}>
+                        {isLeague ? "Club League" : "International"}
                       </span>
-                      {tour && (
-                        <Link to={`/competition/${tour._id}`} className="edition-tour-tag">
-                          <Logo url={tour.imageUrl} label={tour.name} size="xs" />
-                          <span>{tour.name}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card Body */}
+                <div className="tournament-card-body">
+                  <Link
+                    to={tour ? `/competition/${tour._id}` : "#"}
+                    className="tournament-card-title-link"
+                  >
+                    <h3 className="tournament-card-name" title={edition.name}>
+                      {edition.name}
+                    </h3>
+                  </Link>
+
+                  <div className="tournament-card-meta">
+                    <span className="tournament-sport-pill">
+                      {tour?.sport?.name || "Sport"}
+                    </span>
+                    {tour?.name && tour.name !== edition.name && (
+                      <span
+                        className="tournament-comp-sub"
+                        title={tour.name}
+                        style={{
+                          fontSize: "12px",
+                          color: "var(--dim)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          maxWidth: "180px",
+                        }}
+                      >
+                        {tour.name}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Highlights Box: Winner, Runner-up & Total Participants */}
+                  <div className="tournament-highlights">
+                    {/* Winner */}
+                    <div className="highlight-row">
+                      <span className="highlight-label">
+                        <Trophy
+                          size={12}
+                          style={{
+                            display: "inline",
+                            verticalAlign: "-1px",
+                            marginRight: "3px",
+                            color: "var(--gold)",
+                          }}
+                        />
+                        Winner:
+                      </span>
+                      {winTeam ? (
+                        <Link
+                          to={`/team/${winTeam._id}`}
+                          className="highlight-team"
+                          title={winTeam.name}
+                        >
+                          <Logo
+                            url={winTeam.imageUrl}
+                            label={winTeam.name}
+                            short={winTeam.short}
+                            color={winTeam.color}
+                            size="xs"
+                          />
+                          <span className="highlight-team-name">{winTeam.name}</span>
                         </Link>
+                      ) : (
+                        <span className="highlight-none">No winner recorded</span>
                       )}
                     </div>
-                  </div>
 
-                  {isAdmin && (
-                    <div className="edition-actions">
-                      <button
-                        type="button"
-                        className="btn-icon"
-                        title="Edit edition"
-                        onClick={() => openEditEditionModal(edition)}
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon del"
-                        title="Delete edition"
-                        onClick={() => openDeleteConfirmModal(edition)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Main Honours Showcase: Champions vs Finalist */}
-                <div className="edition-honours-grid">
-                  {/* Champion Podium Box */}
-                  <div className="podium-card champion">
-                    <div className="podium-header">
-                      <span className="podium-tag gold">🏆 Champions</span>
-                    </div>
-                    {winTeam ? (
-                      <Link to={`/team/${winTeam._id}`} className="podium-team">
-                        <Logo
-                          url={winTeam.imageUrl}
-                          label={winTeam.name}
-                          short={winTeam.short}
-                          color={winTeam.color}
-                          size="lg"
+                    {/* Runner-up */}
+                    <div className="highlight-row">
+                      <span className="highlight-label">
+                        <Medal
+                          size={12}
+                          style={{
+                            display: "inline",
+                            verticalAlign: "-1px",
+                            marginRight: "3px",
+                            color: edition.shared ? "var(--gold)" : "var(--silver)",
+                          }}
                         />
-                        <div className="podium-team-details">
-                          <span className="podium-team-name">{winTeam.name}</span>
-                          <span className="podium-team-sub">Tournament Winner</span>
-                        </div>
-                      </Link>
-                    ) : (
-                      <div className="podium-team empty">
-                        <span className="podium-none">— Not Awarded —</span>
-                      </div>
-                    )}
-                  </div>
+                        {edition.shared ? "Joint Winner:" : "Runner-up:"}
+                      </span>
+                      {ruTeam ? (
+                        <Link
+                          to={`/team/${ruTeam._id}`}
+                          className="highlight-team"
+                          title={ruTeam.name}
+                        >
+                          <Logo
+                            url={ruTeam.imageUrl}
+                            label={ruTeam.name}
+                            short={ruTeam.short}
+                            color={ruTeam.color}
+                            size="xs"
+                          />
+                          <span className="highlight-team-name">{ruTeam.name}</span>
+                        </Link>
+                      ) : (
+                        <span className="highlight-none">—</span>
+                      )}
+                    </div>
 
-                  {/* Second Team Podium Box: Co-Champion if Shared, Runner-up if not */}
-                  <div className={`podium-card ${edition.shared ? "champion" : "runner-up"}`}>
-                    <div className="podium-header">
-                      <span className={`podium-tag ${edition.shared ? "gold" : "silver"}`}>
-                        {edition.shared ? "🏆 Champions" : "🥈 Runner-up"}
+                    {/* Total Participants */}
+                    <div className="highlight-row">
+                      <span className="highlight-label">
+                        <Users
+                          size={12}
+                          style={{
+                            display: "inline",
+                            verticalAlign: "-1px",
+                            marginRight: "3px",
+                            color: "#38bdf8",
+                          }}
+                        />
+                        Participants:
+                      </span>
+                      <span className="highlight-participants-count">
+                        {totalParticipants} {totalParticipants === 1 ? "Team" : "Teams"}
                       </span>
                     </div>
-                    {ruTeam ? (
-                      <Link to={`/team/${ruTeam._id}`} className="podium-team">
-                        <Logo
-                          url={ruTeam.imageUrl}
-                          label={ruTeam.name}
-                          short={ruTeam.short}
-                          color={ruTeam.color}
-                          size="lg"
-                        />
-                        <div className="podium-team-details">
-                          <span className="podium-team-name">{ruTeam.name}</span>
-                          <span className="podium-team-sub">
-                            {edition.shared ? "Tournament Winner" : "Finalist"}
-                          </span>
-                        </div>
-                      </Link>
-                    ) : (
-                      <div className="podium-team empty">
-                        <span className="podium-none">— None / Not Awarded —</span>
-                      </div>
-                    )}
                   </div>
                 </div>
 
-                {/* Other Participants Ribbon */}
-                {otherParticipants.length > 0 && (
-                  <div className="edition-participants-gallery">
-                    <span className="participants-ribbon-title">
-                      Other Participants ({otherParticipants.length}):
-                    </span>
-                    <div className="participants-ribbon-list">
-                      {otherParticipants.map((p) => {
-                        const pTeam = p.team;
-                        if (!pTeam || typeof pTeam !== "object") return null;
-                        return (
-                          <Link
-                            key={pTeam._id}
-                            to={`/team/${pTeam._id}`}
-                            className="participant-pill"
-                            title={pTeam.name}
-                          >
-                            <Logo
-                              url={pTeam.imageUrl}
-                              label={pTeam.name}
-                              short={pTeam.short}
-                              color={pTeam.color}
-                              size="sm"
-                            />
-                            <span className="participant-pill-name">{pTeam.name}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
+                {/* Footer Action */}
+                {tour && (
+                  <Link to={`/competition/${tour._id}`} className="tournament-card-footer">
+                    <span>View Competition Roll of Honour</span>
+                    <span className="footer-arrow">↗</span>
+                  </Link>
                 )}
               </div>
             );

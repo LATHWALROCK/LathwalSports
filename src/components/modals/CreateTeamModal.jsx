@@ -104,7 +104,7 @@ export default function CreateTeamModal() {
 
         const tour = tournaments.find((t) => t._id === teamModal.tournamentId);
         if (tour) {
-          setSelectedTournaments(tour.type === "League" ? [tour._id] : []);
+          setSelectedTournaments([tour._id]);
           setType(teamModal.type || (tour.type === "League" ? "League" : "National"));
         } else {
           setSelectedTournaments([]);
@@ -199,14 +199,15 @@ export default function CreateTeamModal() {
         formData.append("tournament", "");
       }
 
-      // Franchise / Ownership Group
-      if (groupIdentifier.trim()) {
-        formData.append(
-          "groupIdentifier",
-          groupIdentifier.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-        );
-      }
-      if (groupName.trim()) {
+      // Franchise / Ownership Group (cleared for National teams or when user clears group)
+      if (type === "National") {
+        formData.append("groupIdentifier", "");
+        formData.append("groupName", "");
+      } else {
+        const cleanGroupId = groupIdentifier.trim()
+          ? groupIdentifier.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+          : "";
+        formData.append("groupIdentifier", cleanGroupId);
         formData.append("groupName", groupName.trim());
       }
 
@@ -241,9 +242,22 @@ export default function CreateTeamModal() {
     }
   };
 
-  const filteredTournaments = tournaments.filter(
-    (t) => !sport || (t.sport?._id || t.sport) === sport
-  );
+  const filteredTournaments = tournaments.filter((t) => {
+    // Must match sport if selected
+    if (sport && (t.sport?._id || t.sport) !== sport) return false;
+
+    // Filter by team type:
+    // National teams only get International tournaments
+    if (type === "National") {
+      return t.type === "International" || t.type !== "League";
+    }
+    // Club / League teams only get League competitions
+    if (type === "League") {
+      return t.type === "League";
+    }
+
+    return true;
+  });
 
   const availableTournamentsToAdd = filteredTournaments.filter(
     (t) => !selectedTournaments.includes(t._id)
@@ -353,7 +367,26 @@ export default function CreateTeamModal() {
                 <Picklist
                   variant="modal"
                   value={type}
-                  onChange={(val) => setType(val)}
+                  onChange={(val) => {
+                    setType(val);
+                    if (val === "National") {
+                      setGroupIdentifier("");
+                      setGroupName("");
+                      setSelectedTournaments((prev) =>
+                        prev.filter((tid) => {
+                          const tour = tournaments.find((t) => t._id === tid);
+                          return tour && (tour.type === "International" || tour.type !== "League");
+                        })
+                      );
+                    } else if (val === "League") {
+                      setSelectedTournaments((prev) =>
+                        prev.filter((tid) => {
+                          const tour = tournaments.find((t) => t._id === tid);
+                          return tour && tour.type === "League";
+                        })
+                      );
+                    }
+                  }}
                   placeholder="Select Team Type"
                   options={[
                     { value: "National", label: "National Team (Country)" },
@@ -376,126 +409,162 @@ export default function CreateTeamModal() {
               </div>
             </div>
 
-            {/* Associated Competitions (Multiple Allowed for Club Teams) */}
-            {type === "League" && (
-              <div className="form-group">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                  <label style={{ margin: 0 }}>Associated Competitions (Multiple Allowed)</label>
-                  <span style={{ fontSize: "12px", color: "var(--muted)" }}>
-                    {selectedTournaments.length} {selectedTournaments.length === 1 ? "competition" : "competitions"} selected
-                  </span>
+            {/* Associated Competitions (International for National Teams, League/Club for Club Teams) */}
+            <div className="form-group">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <label style={{ margin: 0 }}>
+                  {type === "National"
+                    ? "Associated International Competitions (e.g. World Cups, Continental Championships)"
+                    : type === "League"
+                    ? "Associated Club Competitions (e.g. Domestic Leagues, Continental Cups)"
+                    : "Associated Competitions (Multiple Allowed)"}
+                </label>
+                <span style={{ fontSize: "12px", color: "var(--muted)" }}>
+                  {selectedTournaments.length} {selectedTournaments.length === 1 ? "competition" : "competitions"} selected
+                </span>
+              </div>
+
+              <Picklist
+                variant="modal"
+                value=""
+                onChange={(val) => {
+                  if (val && !selectedTournaments.includes(val)) {
+                    setSelectedTournaments((prev) => [...prev, val]);
+                  }
+                }}
+                placeholder={
+                  !sport
+                    ? "Select a sport above first"
+                    : !type
+                    ? "Select a team type above first"
+                    : filteredTournaments.length === 0
+                    ? type === "National"
+                      ? "No international tournaments created for this sport yet"
+                      : "No club / league competitions created for this sport yet"
+                    : availableTournamentsToAdd.length === 0
+                    ? type === "National"
+                      ? "All international competitions already added"
+                      : "All club competitions already added"
+                    : type === "National"
+                    ? "+ Select & Add International Tournament..."
+                    : "+ Select & Add Club Competition..."
+                }
+                options={availableTournamentsToAdd.map((t) => ({
+                  value: t._id,
+                  label: t.name,
+                  logo: t.imageUrl,
+                }))}
+                disabled={!sport || availableTournamentsToAdd.length === 0}
+              />
+
+              {selectedTournaments.length > 0 && (
+                <div className="comp-tags-container">
+                  {selectedTournaments.map((tId) => {
+                    const tDoc = tournaments.find((t) => t._id === tId);
+                    return (
+                      <span key={tId} className="comp-tag-pill">
+                        {tDoc?.imageUrl && (
+                          <Logo url={tDoc.imageUrl} label={tDoc.name} size="xs" />
+                        )}
+                        <span className="comp-tag-name">{tDoc?.name || "Competition"}</span>
+                        <button
+                          type="button"
+                          className="btn-remove-tag"
+                          onClick={() => setSelectedTournaments((prev) => prev.filter((id) => id !== tId))}
+                          title="Remove competition association"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Franchise / Ownership Group Section (Only for Club / League Teams) */}
+            {type !== "National" && (
+              <div className="form-group-card">
+                <div className="form-group-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span className="card-icon">🌐</span>
+                    <div>
+                      <label style={{ margin: 0, fontWeight: 600 }}>Franchise / Ownership Group (Optional)</label>
+                      <small style={{ color: "var(--muted)", display: "block" }}>
+                        Link sister teams under the same owner/network (e.g. MI Family, City Football Group, Red Bull)
+                      </small>
+                    </div>
+                  </div>
+                  {(groupName || groupIdentifier) && (
+                    <button
+                      type="button"
+                      className="btn ghost sm"
+                      style={{ fontSize: "11px", padding: "3px 8px", color: "var(--silver)", borderColor: "rgba(255, 255, 255, 0.15)" }}
+                      onClick={() => {
+                        setGroupName("");
+                        setGroupIdentifier("");
+                      }}
+                      title="Clear franchise / ownership group association"
+                    >
+                      ✕ Clear Group
+                    </button>
+                  )}
                 </div>
 
-                <Picklist
-                  variant="modal"
-                  value=""
-                  onChange={(val) => {
-                    if (val && !selectedTournaments.includes(val)) {
-                      setSelectedTournaments((prev) => [...prev, val]);
-                    }
-                  }}
-                  placeholder={
-                    filteredTournaments.length === 0
-                      ? "No competitions created for this sport yet"
-                      : availableTournamentsToAdd.length === 0
-                      ? "All sport competitions already added"
-                      : "+ Select & Add Competition..."
-                  }
-                  options={availableTournamentsToAdd.map((t) => ({
-                    value: t._id,
-                    label: t.name,
-                    logo: t.imageUrl,
-                  }))}
-                  disabled={availableTournamentsToAdd.length === 0}
-                />
-
-                {selectedTournaments.length > 0 && (
-                  <div className="comp-tags-container">
-                    {selectedTournaments.map((tId) => {
-                      const tDoc = tournaments.find((t) => t._id === tId);
-                      return (
-                        <span key={tId} className="comp-tag-pill">
-                          {tDoc?.imageUrl && (
-                            <Logo url={tDoc.imageUrl} label={tDoc.name} size="xs" />
-                          )}
-                          <span className="comp-tag-name">{tDoc?.name || "Competition"}</span>
-                          <button
-                            type="button"
-                            className="btn-remove-tag"
-                            onClick={() => setSelectedTournaments((prev) => prev.filter((id) => id !== tId))}
-                            title="Remove competition association"
-                          >
-                            <X size={12} />
-                          </button>
-                        </span>
-                      );
-                    })}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "10px" }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="group-name" style={{ fontSize: "12px" }}>Group Display Name</label>
+                    <input
+                      id="group-name"
+                      className="form-control"
+                      type="text"
+                      placeholder="e.g. MI Family, City Football Group"
+                      value={groupName}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setGroupName(val);
+                        if (!val.trim()) {
+                          setGroupIdentifier("");
+                          return;
+                        }
+                        const matched = existingGroups.find((g) => g.name.toLowerCase() === val.toLowerCase());
+                        if (matched) {
+                          setGroupIdentifier(matched.id);
+                        } else if (!groupIdentifier || groupIdentifier === groupName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")) {
+                          setGroupIdentifier(val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+                        }
+                      }}
+                      list="existing-group-names"
+                    />
+                    <datalist id="existing-group-names">
+                      {existingGroups.map((g) => (
+                        <option key={g.id} value={g.name} />
+                      ))}
+                    </datalist>
                   </div>
-                )}
+
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor="group-identifier" style={{ fontSize: "12px" }}>Group Identifier (Slug)</label>
+                    <input
+                      id="group-identifier"
+                      className="form-control"
+                      type="text"
+                      placeholder="e.g. mi-family, city-football-group"
+                      value={groupIdentifier}
+                      onChange={(e) => setGroupIdentifier(e.target.value)}
+                      list="existing-group-identifiers"
+                    />
+                    <datalist id="existing-group-identifiers">
+                      {existingGroups.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
               </div>
             )}
-
-            {/* Franchise / Ownership Group Section */}
-            <div className="form-group-card">
-              <div className="form-group-card-header">
-                <span className="card-icon">🌐</span>
-                <div>
-                  <label style={{ margin: 0, fontWeight: 600 }}>Franchise / Ownership Group (Optional)</label>
-                  <small style={{ color: "var(--muted)", display: "block" }}>
-                    Link sister teams under the same owner/network (e.g. MI Family, City Football Group, Red Bull)
-                  </small>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "10px" }}>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label htmlFor="group-name" style={{ fontSize: "12px" }}>Group Display Name</label>
-                  <input
-                    id="group-name"
-                    className="form-control"
-                    type="text"
-                    placeholder="e.g. MI Family, City Football Group"
-                    value={groupName}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setGroupName(val);
-                      const matched = existingGroups.find((g) => g.name.toLowerCase() === val.toLowerCase());
-                      if (matched) {
-                        setGroupIdentifier(matched.id);
-                      } else if (!groupIdentifier || groupIdentifier === groupName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")) {
-                        setGroupIdentifier(val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
-                      }
-                    }}
-                    list="existing-group-names"
-                  />
-                  <datalist id="existing-group-names">
-                    {existingGroups.map((g) => (
-                      <option key={g.id} value={g.name} />
-                    ))}
-                  </datalist>
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label htmlFor="group-identifier" style={{ fontSize: "12px" }}>Group Identifier (Slug)</label>
-                  <input
-                    id="group-identifier"
-                    className="form-control"
-                    type="text"
-                    placeholder="e.g. mi-family, city-football-group"
-                    value={groupIdentifier}
-                    onChange={(e) => setGroupIdentifier(e.target.value)}
-                    list="existing-group-identifiers"
-                  />
-                  <datalist id="existing-group-identifiers">
-                    {existingGroups.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.name}
-                      </option>
-                    ))}
-                  </datalist>
-                </div>
-              </div>
-            </div>
 
             {/* Team Crest / Logo */}
             <div className="form-group">

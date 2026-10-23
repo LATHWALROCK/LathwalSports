@@ -61,13 +61,17 @@ exports.createTeam = async (req, res) => {
             cleanTournaments.push(cleanTournament);
         }
 
-        // Clean Group / Ownership details
-        const cleanGroupIdentifier = groupIdentifier && groupIdentifier.trim()
-            ? groupIdentifier.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-            : groupName && groupName.trim()
-            ? groupName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-            : undefined;
-        const cleanGroupName = groupName && groupName.trim() ? groupName.trim() : undefined;
+        // Clean Group / Ownership details (only for non-National teams)
+        let cleanGroupIdentifier = undefined;
+        let cleanGroupName = undefined;
+        if (cleanType !== "National") {
+            cleanGroupIdentifier = groupIdentifier && groupIdentifier.trim()
+                ? groupIdentifier.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+                : groupName && groupName.trim()
+                ? groupName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+                : undefined;
+            cleanGroupName = groupName && groupName.trim() ? groupName.trim() : undefined;
+        }
 
         if (!cleanName || !cleanSport) {
             return res.status(403).json({
@@ -345,14 +349,25 @@ exports.updateTeam = async (req, res) => {
         const cleanSport = sport.trim();
         const cleanType = type ? type.trim() : "National";
 
-        const updateData = {
+        const updateSet = {
             name: cleanName,
             sport: cleanSport,
             type: cleanType,
-            city: city ? city.trim() : undefined,
-            country: country ? country.trim() : undefined,
-            tournament: tournament ? tournament.trim() : undefined,
         };
+        const updateUnset = {};
+
+        // City & Country
+        if (city && city.trim()) {
+            updateSet.city = city.trim();
+        } else if (city !== undefined) {
+            updateUnset.city = 1;
+        }
+
+        if (country && country.trim()) {
+            updateSet.country = country.trim();
+        } else if (country !== undefined) {
+            updateUnset.country = 1;
+        }
 
         // Handle tournaments array
         if (tournaments !== undefined) {
@@ -368,33 +383,50 @@ exports.updateTeam = async (req, res) => {
                     cleanTournaments = tournaments.split(",").map((s) => s.trim()).filter(Boolean);
                 }
             }
-            if (updateData.tournament && !cleanTournaments.includes(updateData.tournament)) {
-                cleanTournaments.push(updateData.tournament);
+            if (tournament && tournament.trim() && !cleanTournaments.includes(tournament.trim())) {
+                cleanTournaments.push(tournament.trim());
             }
-            updateData.tournaments = cleanTournaments;
-            if (!updateData.tournament && cleanTournaments.length > 0) {
-                updateData.tournament = cleanTournaments[0];
+            updateSet.tournaments = cleanTournaments;
+            if (cleanTournaments.length > 0) {
+                updateSet.tournament = cleanTournaments[0];
+            } else {
+                updateUnset.tournament = 1;
+            }
+        } else if (tournament !== undefined) {
+            if (tournament && tournament.trim()) {
+                updateSet.tournament = tournament.trim();
+            } else {
+                updateUnset.tournament = 1;
             }
         }
 
         // Handle Group / Ownership details
-        if (groupIdentifier !== undefined || groupName !== undefined) {
+        if (cleanType === "National") {
+            updateUnset.groupIdentifier = 1;
+            updateUnset.groupName = 1;
+        } else if (groupIdentifier !== undefined || groupName !== undefined) {
             const gId = groupIdentifier && groupIdentifier.trim()
                 ? groupIdentifier.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
                 : groupName && groupName.trim()
                 ? groupName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-                : null;
-            updateData.groupIdentifier = gId || undefined;
-            updateData.groupName = groupName && groupName.trim() ? groupName.trim() : (gId || undefined);
+                : "";
+
+            if (gId) {
+                updateSet.groupIdentifier = gId;
+                updateSet.groupName = groupName && groupName.trim() ? groupName.trim() : gId;
+            } else {
+                updateUnset.groupIdentifier = 1;
+                updateUnset.groupName = 1;
+            }
         }
 
         if (teamIdentifier) {
-            updateData.teamIdentifier = teamIdentifier.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+            updateSet.teamIdentifier = teamIdentifier.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
         }
         if (isCurrent !== undefined) {
-            updateData.isCurrent = isCurrent === "true" || isCurrent === true;
-            if (updateData.isCurrent) {
-                const targetIdentifier = updateData.teamIdentifier;
+            updateSet.isCurrent = isCurrent === "true" || isCurrent === true;
+            if (updateSet.isCurrent) {
+                const targetIdentifier = updateSet.teamIdentifier;
                 if (targetIdentifier) {
                     await Team.updateMany(
                         { teamIdentifier: targetIdentifier, sport: cleanSport, _id: { $ne: _id } },
@@ -416,10 +448,15 @@ exports.updateTeam = async (req, res) => {
             const folder = "teams";
             const options = { folder };
             const result = await cloudinary.uploader.upload(file.tempFilePath, options);
-            updateData.imageUrl = result.secure_url;
+            updateSet.imageUrl = result.secure_url;
         }
 
-        const updatedTeam = await Team.findByIdAndUpdate(_id, updateData, { new: true, runValidators: true })
+        const updateQuery = { $set: updateSet };
+        if (Object.keys(updateUnset).length > 0) {
+            updateQuery.$unset = updateUnset;
+        }
+
+        const updatedTeam = await Team.findByIdAndUpdate(_id, updateQuery, { new: true, runValidators: true })
             .populate("sport")
             .populate("tournament")
             .populate("tournaments");

@@ -33,10 +33,45 @@ export default function Tournaments() {
 
   // Pre-calculate editions, reigning champions, and most successful teams for each tournament
   const tournamentStatsMap = useMemo(() => {
+    // Helper to find the canonical representative team across all eras in the same sport
+    const getCanonical = (tm, sportFallback = "") => {
+      if (!tm) return null;
+      const tmId = String(tm._id || tm);
+      const teamDoc = teams.find((x) => String(x._id) === tmId) || (typeof tm === "object" ? tm : null);
+      if (!teamDoc) return null;
+
+      const sportId = String(teamDoc.sport?._id || teamDoc.sport || sportFallback || "");
+      const ident = String(teamDoc.teamIdentifier || "").trim().toLowerCase();
+      const nameNorm = String(teamDoc.name || "").trim().toLowerCase();
+
+      // Find all eras for this team within the same sport
+      const eras = teams.filter((candidate) => {
+        const cSportId = String(candidate.sport?._id || candidate.sport || "");
+        if (sportId && cSportId && sportId !== cSportId) return false;
+        const cIdent = String(candidate.teamIdentifier || "").trim().toLowerCase();
+        const cName = String(candidate.name || "").trim().toLowerCase();
+
+        if (ident && cIdent && ident === cIdent) return true;
+        if (nameNorm && cName && nameNorm === cName) return true;
+        return String(candidate._id) === String(teamDoc._id);
+      });
+
+      // Prefer the era marked as isCurrent === true, otherwise the first matching era
+      const primary = eras.find((era) => era.isCurrent) || eras[0] || teamDoc;
+      const canonicalKey = `${sportId}___${String(primary.teamIdentifier || primary.name || primary._id).trim().toLowerCase()}`;
+
+      return {
+        primary,
+        canonicalKey,
+        allEras: eras,
+      };
+    };
+
     const map = new Map();
 
     tournaments.forEach((tour) => {
       const tourId = String(tour._id);
+      const tourSportId = String(tour.sport?._id || tour.sport || "");
 
       // All editions for this tournament
       const tourEditions = leagues
@@ -50,8 +85,11 @@ export default function Tournaments() {
         latestEdition = tourEditions[0];
         const winItem = latestEdition.teams?.find((t) => t.position === 1);
         if (winItem) {
+          const canonical = getCanonical(winItem.team, tourSportId);
           const winTeamDoc =
-            teams.find((tm) => tm._id === (winItem.team?._id || winItem.team)) || winItem.team;
+            canonical?.primary ||
+            teams.find((tm) => tm._id === (winItem.team?._id || winItem.team)) ||
+            winItem.team;
           reigningChampion = {
             team: winTeamDoc,
             year: latestEdition.season || latestEdition.year,
@@ -59,18 +97,20 @@ export default function Tournaments() {
         }
       }
 
-      // Most successful team (most title wins)
+      // Most successful team (most title wins across all historical eras of a team)
       const winnerTally = new Map();
       tourEditions.forEach((l) => {
         l.teams?.forEach((t) => {
           if (t.position === 1 || (l.shared && t.position === 2)) {
-            const teamId = String(t.team?._id || t.team || "");
-            if (teamId) {
-              const currentWins = winnerTally.get(teamId) || { count: 0, team: null };
-              const teamDoc = teams.find((tm) => tm._id === teamId) || t.team;
-              winnerTally.set(teamId, {
+            const canonical = getCanonical(t.team, tourSportId);
+            if (canonical && canonical.canonicalKey) {
+              const currentWins = winnerTally.get(canonical.canonicalKey) || {
+                count: 0,
+                team: canonical.primary,
+              };
+              winnerTally.set(canonical.canonicalKey, {
                 count: currentWins.count + 1,
-                team: teamDoc || currentWins.team,
+                team: currentWins.team?.isCurrent ? currentWins.team : canonical.primary,
               });
             }
           }
@@ -79,7 +119,11 @@ export default function Tournaments() {
 
       let mostSuccessful = null;
       if (winnerTally.size > 0) {
-        const sortedWinners = Array.from(winnerTally.values()).sort((a, b) => b.count - a.count);
+        const sortedWinners = Array.from(winnerTally.values()).sort((a, b) => {
+          const diff = b.count - a.count;
+          if (diff !== 0) return diff;
+          return (a.team.name || "").localeCompare(b.team.name || "");
+        });
         mostSuccessful = sortedWinners[0];
       }
 
