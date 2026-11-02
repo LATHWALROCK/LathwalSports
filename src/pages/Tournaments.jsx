@@ -8,6 +8,7 @@ import {
   X,
   Trophy,
   Plus,
+  Edit2,
   ExternalLink,
   Crown,
 } from "lucide-react";
@@ -20,6 +21,7 @@ export default function Tournaments() {
     leagues,
     isAdmin,
     openCreateTournamentModal,
+    openEditTournamentModal,
     openAddEditionModal,
   } = useSports();
 
@@ -521,6 +523,20 @@ export default function Tournaments() {
                     <span className="tournament-editions-badge">
                       {stats.editionsCount} {stats.editionsCount === 1 ? "Edition" : "Editions"}
                     </span>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openEditTournamentModal(tour);
+                        }}
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#121826] border border-[#232c40] text-[#8b96ad] hover:text-[#f5c542] hover:border-[#f5c542]/50 transition-colors cursor-pointer"
+                        title={`Edit ${tour.name}`}
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                    )}
                   </div>
                 </div>
 

@@ -15,6 +15,8 @@ export default function CreateTournamentModal() {
     fetchEverything,
   } = useSports();
 
+  const isEditing = Boolean(tournamentModal.editingTournament);
+
   const [name, setName] = useState("");
   const [sport, setSport] = useState("");
   const [type, setType] = useState(""); // empty initially, no preselection
@@ -24,13 +26,22 @@ export default function CreateTournamentModal() {
 
   useEffect(() => {
     if (tournamentModal.isOpen) {
-      setName("");
-      setSport(tournamentModal.sportId || "");
-      setType("");
-      setImageFile(null);
-      setPreview(null);
+      if (tournamentModal.editingTournament) {
+        const tour = tournamentModal.editingTournament;
+        setName(tour.name || "");
+        setSport(tour.sport?._id || tour.sport || tournamentModal.sportId || "");
+        setType(tour.type || "");
+        setPreview(tour.imageUrl || null);
+        setImageFile(null);
+      } else {
+        setName("");
+        setSport(tournamentModal.sportId || "");
+        setType("");
+        setImageFile(null);
+        setPreview(null);
+      }
     }
-  }, [tournamentModal.isOpen, tournamentModal.sportId]);
+  }, [tournamentModal.isOpen, tournamentModal.editingTournament, tournamentModal.sportId]);
 
   if (!tournamentModal.isOpen) return null;
 
@@ -57,30 +68,44 @@ export default function CreateTournamentModal() {
       toast.error("Please select competition type");
       return;
     }
-    if (!imageFile) {
+    if (!isEditing && !imageFile) {
+      toast.error("Please upload competition logo/emblem");
+      return;
+    }
+    if (isEditing && !imageFile && !preview) {
       toast.error("Please upload competition logo/emblem");
       return;
     }
 
     setSubmitting(true);
-    const toastId = toast.loading("Creating competition...");
+    const toastId = toast.loading(isEditing ? "Updating competition..." : "Creating competition...");
 
     try {
       const formData = new FormData();
+      if (isEditing) {
+        formData.append("_id", tournamentModal.editingTournament._id);
+      }
       formData.append("name", name.trim());
       formData.append("sport", sport);
       formData.append("type", type === "League" ? "League" : "International");
-      formData.append("image", imageFile);
+      if (imageFile) {
+        formData.append("image", imageFile);
+      }
 
-      const res = await apiConnector("POST", tournamentEndpoints.CREATE_TOURNAMENT, formData, {
+      const endpoint = isEditing
+        ? tournamentEndpoints.UPDATE_TOURNAMENT
+        : tournamentEndpoints.CREATE_TOURNAMENT;
+      const method = isEditing ? "PUT" : "POST";
+
+      const res = await apiConnector(method, endpoint, formData, {
         "Content-Type": "multipart/form-data",
       });
 
       if (!res.data.success) {
-        throw new Error(res.data.message || "Failed to create competition");
+        throw new Error(res.data.message || `Failed to ${isEditing ? "update" : "create"} competition`);
       }
 
-      toast.success(`Competition "${name}" created!`, { id: toastId });
+      toast.success(`Competition "${name.trim()}" ${isEditing ? "updated" : "created"}!`, { id: toastId });
       await fetchEverything();
 
       if (tournamentModal.onSuccessCallback && res.data.tournament) {
@@ -90,7 +115,7 @@ export default function CreateTournamentModal() {
       closeCreateTournamentModal();
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || err.message || "Competition creation failed", {
+      toast.error(err.response?.data?.message || err.message || `Competition ${isEditing ? "update" : "creation"} failed`, {
         id: toastId,
       });
     } finally {
@@ -103,7 +128,7 @@ export default function CreateTournamentModal() {
       <div className="modal-dialog sm" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>
-            <span>🏆</span> Create New Competition
+            <span>{isEditing ? "✏️" : "🏆"}</span> {isEditing ? "Edit Competition" : "Create New Competition"}
           </h3>
           <button className="modal-close" onClick={closeCreateTournamentModal} type="button">
             <X size={20} />
@@ -173,7 +198,7 @@ export default function CreateTournamentModal() {
                   <div className="dropzone-preview">
                     <img src={preview} alt="Competition logo preview" />
                     <div className="preview-info">
-                      <b>{imageFile?.name || "Logo Selected"}</b>
+                      <b>{imageFile?.name || (isEditing ? "Current Competition Logo" : "Logo Selected")}</b>
                       <small>Click to change file</small>
                     </div>
                     <button
@@ -214,7 +239,9 @@ export default function CreateTournamentModal() {
               Cancel
             </button>
             <button type="submit" className="btn primary" disabled={submitting}>
-              {submitting ? "Creating..." : "Save Competition"}
+              {submitting
+                ? (isEditing ? "Saving Changes..." : "Creating...")
+                : (isEditing ? "Save Changes" : "Save Competition")}
             </button>
           </div>
         </form>

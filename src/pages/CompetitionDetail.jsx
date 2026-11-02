@@ -13,6 +13,7 @@ export default function CompetitionDetail() {
     isAdmin,
     openAddEditionModal,
     openEditEditionModal,
+    openEditTournamentModal,
     openDeleteConfirmModal,
   } = useSports();
 
@@ -248,6 +249,16 @@ export default function CompetitionDetail() {
             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] text-[#8b96ad] border border-[#232c40]">
               {tournament.type === "League" ? "Club / League" : "International Tournament"}
             </span>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => openEditTournamentModal(tournament)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] text-[#f5c542] border border-[#f5c542]/40 hover:bg-[#f5c542]/10 hover:border-[#f5c542] transition-colors cursor-pointer"
+                title="Edit competition details"
+              >
+                <Edit2 size={12} /> Edit Competition
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-2.5 sm:gap-4 mt-6 max-w-lg mx-auto sm:mx-0">

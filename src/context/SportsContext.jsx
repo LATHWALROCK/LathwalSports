@@ -54,6 +54,7 @@ export function SportsProvider({ children }) {
 
   const [tournamentModal, setTournamentModal] = useState({
     isOpen: false,
+    editingTournament: null,
     sportId: "",
     onSuccessCallback: null,
   });
@@ -144,7 +145,17 @@ export function SportsProvider({ children }) {
   const openCreateTournamentModal = ({ sportId = "", callback } = {}) => {
     setTournamentModal({
       isOpen: true,
+      editingTournament: null,
       sportId: sportId || "",
+      onSuccessCallback: callback || null,
+    });
+  };
+
+  const openEditTournamentModal = (tournament, callback) => {
+    setTournamentModal({
+      isOpen: true,
+      editingTournament: tournament,
+      sportId: tournament?.sport?._id || tournament?.sport || "",
       onSuccessCallback: callback || null,
     });
   };
@@ -152,6 +163,7 @@ export function SportsProvider({ children }) {
   const closeCreateTournamentModal = () => {
     setTournamentModal({
       isOpen: false,
+      editingTournament: null,
       sportId: "",
       onSuccessCallback: null,
     });
@@ -246,6 +258,7 @@ export function SportsProvider({ children }) {
         closeCreateSportModal,
         tournamentModal,
         openCreateTournamentModal,
+        openEditTournamentModal,
         closeCreateTournamentModal,
         teamModal,
         openCreateTeamModal,
