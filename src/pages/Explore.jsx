@@ -209,12 +209,12 @@ export default function Explore() {
                     />
                   </div>
 
-                  <div className="tournament-card-badges">
+                  <div className="card-top-right">
                     {isAdmin && (
-                      <div className="edition-admin-actions">
+                      <div className="card-admin-actions">
                         <button
                           type="button"
-                          className="btn-icon"
+                          className="btn-icon edit"
                           title="Edit edition"
                           onClick={(e) => {
                             e.preventDefault();
@@ -238,14 +238,17 @@ export default function Explore() {
                         </button>
                       </div>
                     )}
-                    <span className="tournament-editions-badge">
-                      {edition.season || edition.year}
-                    </span>
-                    {tour && (
-                      <span className={`tournament-type-badge ${isLeague ? "league" : "international"}`}>
-                        {isLeague ? "Club League" : "International"}
+
+                    <div className="tournament-card-badges">
+                      {tour && (
+                        <span className={`tournament-type-badge ${isLeague ? "league" : "international"}`}>
+                          {isLeague ? "Club League" : "International"}
+                        </span>
+                      )}
+                      <span className="tournament-editions-badge">
+                        {edition.season || edition.year}
                       </span>
-                    )}
+                    </div>
                   </div>
                 </div>
 

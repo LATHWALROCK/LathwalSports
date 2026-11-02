@@ -35,6 +35,46 @@ export default function Tournaments() {
 
   // Pre-calculate editions, reigning champions, and most successful teams for each tournament
   const tournamentStatsMap = useMemo(() => {
+    // Precompute max edition year for each era
+    const eraMaxYearMap = new Map();
+    if (Array.isArray(leagues)) {
+      leagues.forEach((l) => {
+        if (!l || !Array.isArray(l.teams)) return;
+        const num = Number(l.year);
+        let yr = !isNaN(num) && num > 0 ? num : 0;
+        if (yr <= 0 && l.season) {
+          const m = String(l.season).match(/\d{4}/g);
+          if (m && m.length > 0) yr = Math.max(...m.map((y) => parseInt(y, 10)));
+        }
+        if (yr <= 0) return;
+
+        l.teams.forEach((t) => {
+          const tmId = String(t.team?._id || t.team || "");
+          if (tmId) {
+            const curr = eraMaxYearMap.get(tmId) || 0;
+            if (yr > curr) eraMaxYearMap.set(tmId, yr);
+          }
+        });
+      });
+    }
+
+    const getEraRecency = (era) => {
+      if (!era) return { maxYear: 0, createdTime: 0 };
+      const eraId = String(era._id || "");
+      const maxYear = eraMaxYearMap.get(eraId) || 0;
+      let createdTime = 0;
+      if (era.createdAt) {
+        createdTime = new Date(era.createdAt).getTime();
+      } else if (eraId && eraId.length >= 8) {
+        try {
+          createdTime = parseInt(eraId.substring(0, 8), 16) * 1000;
+        } catch {
+          createdTime = 0;
+        }
+      }
+      return { maxYear, createdTime };
+    };
+
     // Helper to find the canonical representative team across all eras in the same sport
     const getCanonical = (tm, sportFallback = "") => {
       if (!tm) return null;
@@ -58,8 +98,26 @@ export default function Tournaments() {
         return String(candidate._id) === String(teamDoc._id);
       });
 
-      // Prefer the era marked as isCurrent === true, otherwise the first matching era
-      const primary = eras.find((era) => era.isCurrent) || eras[0] || teamDoc;
+      // Sort eras: active first, then latest by participation year / creation time
+      const sortedEras = [...eras].sort((a, b) => {
+        const aCurrent = Boolean(a.isCurrent);
+        const bCurrent = Boolean(b.isCurrent);
+        if (aCurrent && !bCurrent) return -1;
+        if (!aCurrent && bCurrent) return 1;
+
+        const scoreA = getEraRecency(a);
+        const scoreB = getEraRecency(b);
+
+        if (scoreA.maxYear !== scoreB.maxYear) {
+          return scoreB.maxYear - scoreA.maxYear;
+        }
+        if (scoreA.createdTime !== scoreB.createdTime) {
+          return scoreB.createdTime - scoreA.createdTime;
+        }
+        return eras.indexOf(b) - eras.indexOf(a);
+      });
+
+      const primary = sortedEras[0] || teamDoc;
       const canonicalKey = `${sportId}___${String(primary.teamIdentifier || primary.name || primary._id).trim().toLowerCase()}`;
 
       return {
@@ -516,27 +574,32 @@ export default function Tournaments() {
                     <Logo url={tour.imageUrl} label={tour.name} size="xl" />
                   </div>
 
-                  <div className="tournament-card-badges">
-                    <span className={`tournament-type-badge ${isLeague ? "league" : "international"}`}>
-                      {isLeague ? "Club League" : "International"}
-                    </span>
-                    <span className="tournament-editions-badge">
-                      {stats.editionsCount} {stats.editionsCount === 1 ? "Edition" : "Editions"}
-                    </span>
+                  <div className="card-top-right">
                     {isAdmin && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          openEditTournamentModal(tour);
-                        }}
-                        className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#121826] border border-[#232c40] text-[#8b96ad] hover:text-[#f5c542] hover:border-[#f5c542]/50 transition-colors cursor-pointer"
-                        title={`Edit ${tour.name}`}
-                      >
-                        <Edit2 size={13} />
-                      </button>
+                      <div className="card-admin-actions">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openEditTournamentModal(tour);
+                          }}
+                          className="btn-icon edit"
+                          title={`Edit ${tour.name}`}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                      </div>
                     )}
+
+                    <div className="tournament-card-badges">
+                      <span className={`tournament-type-badge ${isLeague ? "league" : "international"}`}>
+                        {isLeague ? "Club League" : "International"}
+                      </span>
+                      <span className="tournament-editions-badge">
+                        {stats.editionsCount} {stats.editionsCount === 1 ? "Edition" : "Editions"}
+                      </span>
+                    </div>
                   </div>
                 </div>
 

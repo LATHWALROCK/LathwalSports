@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useSports } from "../context/SportsContext";
 import Logo from "../components/Logo";
 import Picklist from "../components/Picklist";
+import { formatLocation } from "../utils/helpers";
 import {
   Search,
   X,
@@ -66,6 +67,46 @@ export default function Teams() {
 
   // 2. Pre-process distinct teams (Active Teams mode) vs All Era records
   const distinctTeams = useMemo(() => {
+    // Precompute max edition year for each era
+    const eraMaxYearMap = new Map();
+    if (Array.isArray(leagues)) {
+      leagues.forEach((l) => {
+        if (!l || !Array.isArray(l.teams)) return;
+        const num = Number(l.year);
+        let yr = !isNaN(num) && num > 0 ? num : 0;
+        if (yr <= 0 && l.season) {
+          const m = String(l.season).match(/\d{4}/g);
+          if (m && m.length > 0) yr = Math.max(...m.map((y) => parseInt(y, 10)));
+        }
+        if (yr <= 0) return;
+
+        l.teams.forEach((t) => {
+          const tmId = String(t.team?._id || t.team || "");
+          if (tmId) {
+            const curr = eraMaxYearMap.get(tmId) || 0;
+            if (yr > curr) eraMaxYearMap.set(tmId, yr);
+          }
+        });
+      });
+    }
+
+    const getEraRecency = (era) => {
+      if (!era) return { maxYear: 0, createdTime: 0 };
+      const eraId = String(era._id || "");
+      const maxYear = eraMaxYearMap.get(eraId) || 0;
+      let createdTime = 0;
+      if (era.createdAt) {
+        createdTime = new Date(era.createdAt).getTime();
+      } else if (eraId && eraId.length >= 8) {
+        try {
+          createdTime = parseInt(eraId.substring(0, 8), 16) * 1000;
+        } catch {
+          createdTime = 0;
+        }
+      }
+      return { maxYear, createdTime };
+    };
+
     // Group all team records by: sportId + "___" + teamIdentifier.toLowerCase()
     const groups = new Map();
 
@@ -80,22 +121,35 @@ export default function Teams() {
           sportId,
           ident,
           eras: [],
-          primary: t,
         });
       }
 
       const g = groups.get(key);
       g.eras.push(t);
-
-      // Prefer the version marked isCurrent === true as the primary display representative
-      if (t.isCurrent || (!g.primary.isCurrent && !t.isCurrent)) {
-        g.primary = t;
-      }
     });
 
     // Aggregate statistics across eras for each distinct team
     return Array.from(groups.values()).map((g) => {
-      const primary = g.primary;
+      // Sort eras: active first, then latest by participation year / creation timestamp
+      const sortedEras = [...g.eras].sort((a, b) => {
+        const aCurrent = Boolean(a.isCurrent);
+        const bCurrent = Boolean(b.isCurrent);
+        if (aCurrent && !bCurrent) return -1;
+        if (!aCurrent && bCurrent) return 1;
+
+        const scoreA = getEraRecency(a);
+        const scoreB = getEraRecency(b);
+
+        if (scoreA.maxYear !== scoreB.maxYear) {
+          return scoreB.maxYear - scoreA.maxYear;
+        }
+        if (scoreA.createdTime !== scoreB.createdTime) {
+          return scoreB.createdTime - scoreA.createdTime;
+        }
+        return g.eras.indexOf(b) - g.eras.indexOf(a);
+      });
+
+      const primary = sortedEras[0] || g.eras[0];
       const allEraIds = g.eras.map((era) => String(era._id));
 
       let totalTitles = 0;
@@ -137,7 +191,7 @@ export default function Teams() {
         associatedTournaments: Array.from(allTournamentsMap.values()),
       };
     });
-  }, [teams, titleWinsMap, ruFinishesMap, participationsMap, tournaments]);
+  }, [teams, titleWinsMap, ruFinishesMap, participationsMap, tournaments, leagues]);
 
   // 3. Pre-process flat list for "All Eras" mode
   const allEraRecords = useMemo(() => {
@@ -689,39 +743,42 @@ export default function Teams() {
                     <Logo url={team.imageUrl} label={team.name} size="xl" />
                   </div>
 
-                  <div className="team-card-badges">
-                    <span className={`team-type-badge ${team.type === "National" ? "national" : "club"}`}>
-                      {team.type === "National" ? "National" : "Club"}
-                    </span>
-
-                    {hasMultipleEras && viewMode === "active" && (
-                      <span className="team-era-badge" title={`${team.erasCount} historical eras / crests recorded`}>
-                        ⚡ {team.erasCount} Eras
-                      </span>
+                  <div className="card-top-right">
+                    {isAdmin && (
+                      <div className="card-admin-actions">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openEditTeamModal(team);
+                          }}
+                          className="btn-icon edit"
+                          title={`Edit ${team.name}`}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                      </div>
                     )}
 
-                    {viewMode === "all" && (
-                      <span className={`team-version-badge ${team.isCurrent ? "current" : "historical"}`}>
-                        {team.isCurrent ? "✓ Active Crest" : "Historical"}
+                    <div className="team-card-badges">
+                      <span className={`team-type-badge ${team.type === "National" ? "national" : "club"}`}>
+                        {team.type === "National" ? "National" : "Club"}
                       </span>
-                    )}
+
+                      {hasMultipleEras && viewMode === "active" && (
+                        <span className="team-era-badge" title={`${team.erasCount} historical eras / crests recorded`}>
+                          ⚡ {team.erasCount} Eras
+                        </span>
+                      )}
+
+                      {viewMode === "all" && (
+                        <span className={`team-version-badge ${team.isCurrent ? "current" : "historical"}`}>
+                          {team.isCurrent ? "✓ Active Crest" : "Historical"}
+                        </span>
+                      )}
+                    </div>
                   </div>
-
-                  {/* Admin Edit Shortcut */}
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      className="team-card-admin-edit"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        openEditTeamModal(team);
-                      }}
-                      title={`Edit ${team.name}`}
-                    >
-                      <Edit2 size={13} />
-                    </button>
-                  )}
                 </div>
 
                 {/* Team Info */}
@@ -738,9 +795,9 @@ export default function Teams() {
                     </span>
 
                     {(team.city || team.country) && (
-                      <span className="team-location" title={`${team.city || ""}, ${team.country || ""}`}>
+                      <span className="team-location" title={formatLocation(team.city, team.country)}>
                         <MapPin size={11} style={{ display: "inline", verticalAlign: "-1px", marginRight: "3px" }} />
-                        {team.city ? `${team.city}${team.country ? `, ${team.country}` : ""}` : team.country}
+                        {formatLocation(team.city, team.country)}
                       </span>
                     )}
                   </div>

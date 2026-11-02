@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useSports } from "../context/SportsContext";
 import Logo from "../components/Logo";
 import { Trophy, Edit2, Plus } from "lucide-react";
+import { formatLocation } from "../utils/helpers";
 
 export default function TeamDetail() {
   const { id } = useParams();
@@ -492,7 +493,7 @@ export default function TeamDetail() {
                       </span>
                       {member.city || member.country ? (
                         <span className="sister-loc">
-                          📍 {member.city ? `${member.city}${member.country ? `, ${member.country}` : ""}` : member.country}
+                          📍 {formatLocation(member.city, member.country)}
                         </span>
                       ) : null}
                     </div>

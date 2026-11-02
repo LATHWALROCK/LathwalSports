@@ -2,7 +2,8 @@ import React, { useState, useMemo, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useSports } from "../context/SportsContext";
 import Logo from "../components/Logo";
-import { Plus, Edit2, Trash2, Trophy, Calendar, Crown, ArrowUpDown } from "lucide-react";
+import { Plus, Edit2, Trash2, Trophy, Calendar, Crown } from "lucide-react";
+import { formatLocation } from "../utils/helpers";
 
 export default function CompetitionDetail() {
   const { id } = useParams();
@@ -18,9 +19,75 @@ export default function CompetitionDetail() {
   } = useSports();
 
   const [historyView, setHistoryView] = useState("timeline"); // "timeline" | "summary"
-  const [timelineSort, setTimelineSort] = useState("newest"); // "newest" | "oldest"
 
   const tournament = tournaments.find((t) => t._id === id);
+
+  // Helper to extract the 4-digit calendar year or latest season year from an edition
+  const extractEditionYear = useCallback((edition) => {
+    if (!edition) return 0;
+    const num = Number(edition.year);
+    if (!isNaN(num) && num > 0) return num;
+    const str = String(edition.season || "");
+    const m4 = str.match(/\d{4}/g);
+    if (m4 && m4.length > 0) {
+      let maxY = Math.max(...m4.map((y) => parseInt(y, 10)));
+      const m2 = str.match(/\d{4}[-/](\d{2})\b/);
+      if (m2 && m2[1]) {
+        const century = Math.floor(maxY / 100) * 100;
+        const endY = century + parseInt(m2[1], 10);
+        if (endY > maxY) maxY = endY;
+      }
+      return maxY;
+    }
+    return 0;
+  }, []);
+
+  // Precompute latest edition year for every era across all tournaments/leagues
+  const eraMaxYearMap = useMemo(() => {
+    const map = new Map();
+    if (!Array.isArray(leagues)) return map;
+
+    leagues.forEach((l) => {
+      if (!l || !Array.isArray(l.teams)) return;
+      const yr = extractEditionYear(l);
+      if (yr <= 0) return;
+
+      l.teams.forEach((t) => {
+        const tmId = String(t.team?._id || t.team || "");
+        if (tmId) {
+          const currentMax = map.get(tmId) || 0;
+          if (yr > currentMax) {
+            map.set(tmId, yr);
+          }
+        }
+      });
+    });
+
+    return map;
+  }, [leagues, extractEditionYear]);
+
+  // Recency score calculator for an era (participation year + creation timestamp)
+  const getEraRecency = useCallback(
+    (era) => {
+      if (!era) return { maxYear: 0, createdTime: 0 };
+      const eraId = String(era._id || "");
+      const maxYear = eraMaxYearMap.get(eraId) || 0;
+
+      let createdTime = 0;
+      if (era.createdAt) {
+        createdTime = new Date(era.createdAt).getTime();
+      } else if (eraId && eraId.length >= 8) {
+        try {
+          createdTime = parseInt(eraId.substring(0, 8), 16) * 1000;
+        } catch {
+          createdTime = 0;
+        }
+      }
+
+      return { maxYear, createdTime };
+    },
+    [eraMaxYearMap]
+  );
 
   // Filter editions for this tournament, newest first
   const compEditions = useMemo(() => {
@@ -68,22 +135,48 @@ export default function CompetitionDetail() {
         return String(candidate._id) === String(teamDoc._id);
       });
 
-      // Prefer the era marked as isCurrent === true, otherwise the first matching era
-      const primary = eras.find((era) => era.isCurrent) || eras[0] || teamDoc;
+      // Sort eras to pick the representative:
+      // 1. Era marked isCurrent === true takes top priority
+      // 2. If all eras are inactive (or multiple are current), pick the latest era:
+      //    a) Most recent tournament edition participated in (maxYear)
+      //    b) Creation timestamp / ObjectId
+      //    c) Fallback to last era in the array
+      const sortedEras = [...eras].sort((a, b) => {
+        const aCurrent = Boolean(a.isCurrent);
+        const bCurrent = Boolean(b.isCurrent);
+        if (aCurrent && !bCurrent) return -1;
+        if (!aCurrent && bCurrent) return 1;
+
+        const scoreA = getEraRecency(a);
+        const scoreB = getEraRecency(b);
+
+        if (scoreA.maxYear !== scoreB.maxYear) {
+          return scoreB.maxYear - scoreA.maxYear; // Highest year first
+        }
+
+        if (scoreA.createdTime !== scoreB.createdTime) {
+          return scoreB.createdTime - scoreA.createdTime; // Later created first
+        }
+
+        return eras.indexOf(b) - eras.indexOf(a);
+      });
+
+      const primary = sortedEras[0] || teamDoc;
       const canonicalKey = `${sportId}___${String(primary.teamIdentifier || primary.name || primary._id).trim().toLowerCase()}`;
 
       return {
         primary,
         canonicalKey,
         allEras: eras,
+        sortedEras,
       };
     },
-    [teams, tournament]
+    [teams, tournament, getEraRecency]
   );
 
-  // Editions formatted for the timeline
+  // Editions formatted for the timeline (always newest first)
   const timelineEditions = useMemo(() => {
-    const list = compEditions.map((edition) => {
+    return compEditions.map((edition) => {
       const winPos = edition.teams?.find((t) => t.position === 1);
       const ruPos = edition.teams?.find((t) => t.position === 2);
       return {
@@ -93,16 +186,30 @@ export default function CompetitionDetail() {
         yearNum: Number(edition.year) || 0,
       };
     });
-
-    if (timelineSort === "oldest") {
-      return [...list].sort((a, b) => a.yearNum - b.yearNum);
-    }
-    return list;
-  }, [compEditions, resolveTeam, timelineSort]);
+  }, [compEditions, resolveTeam]);
 
   // All-time winners and runners-up leaderboard summary across all eras
   const summaryLeaderboard = useMemo(() => {
     const tallyMap = new Map();
+
+    const updateLeaderboardTeam = (entry, repTeam) => {
+      if (!entry.team) {
+        entry.team = repTeam;
+        return;
+      }
+      if (entry.team._id === repTeam._id) return;
+
+      const scoreEntry = getEraRecency(entry.team);
+      const scoreRep = getEraRecency(repTeam);
+      const repIsBetter =
+        (!entry.team.isCurrent && repTeam.isCurrent) ||
+        (Boolean(entry.team.isCurrent) === Boolean(repTeam.isCurrent) &&
+          (scoreRep.maxYear > scoreEntry.maxYear ||
+            (scoreRep.maxYear === scoreEntry.maxYear && scoreRep.createdTime >= scoreEntry.createdTime)));
+      if (repIsBetter) {
+        entry.team = repTeam;
+      }
+    };
 
     compEditions.forEach((edition) => {
       const winPos = edition.teams?.find((t) => t.position === 1);
@@ -119,9 +226,7 @@ export default function CompetitionDetail() {
             tallyMap.set(key, { team: repTeam, wins: [], runnerUps: [] });
           }
           const entry = tallyMap.get(key);
-          if (!entry.team?.isCurrent && repTeam.isCurrent) {
-            entry.team = repTeam;
-          }
+          updateLeaderboardTeam(entry, repTeam);
           entry.wins.push({ year: yrLabel, editionId: edition._id });
         }
       }
@@ -136,9 +241,7 @@ export default function CompetitionDetail() {
             tallyMap.set(key, { team: repTeam, wins: [], runnerUps: [] });
           }
           const entry = tallyMap.get(key);
-          if (!entry.team?.isCurrent && repTeam.isCurrent) {
-            entry.team = repTeam;
-          }
+          updateLeaderboardTeam(entry, repTeam);
           if (edition.shared) {
             entry.wins.push({ year: yrLabel, editionId: edition._id });
           } else {
@@ -155,7 +258,7 @@ export default function CompetitionDetail() {
       if (diffRu !== 0) return diffRu;
       return (a.team.name || "").localeCompare(b.team.name || "");
     });
-  }, [compEditions, resolveTeam, getCanonicalTeam]);
+  }, [compEditions, resolveTeam, getCanonicalTeam, getEraRecency]);
 
   const finalistCount = useMemo(() => {
     const finalistSet = new Set();
@@ -194,9 +297,7 @@ export default function CompetitionDetail() {
   // Calculate stats
   const reigningEdition = compEditions[0];
   const reigningWinnerPos = reigningEdition?.teams?.find((t) => t.position === 1);
-  const reigningRuPos = reigningEdition?.teams?.find((t) => t.position === 2);
   const reigningWinner = resolveTeam(reigningWinnerPos?.team);
-  const reigningRunnerUp = resolveTeam(reigningRuPos?.team);
 
   const winnerNames = new Set(
     compEditions
@@ -214,11 +315,15 @@ export default function CompetitionDetail() {
         ← Dashboard
       </Link>
 
-      {/* Detail Header */}
-      <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 bg-gradient-to-br from-[#0f1a2b] via-[#0b1220] to-[#121826] border border-[#232c40] flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
+      {/* Detail Hero Section */}
+      <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 bg-gradient-to-br from-[#0e1626] via-[#090f1b] to-[#121827] border border-[#232c40] shadow-xl">
+        {/* Subtle Ambient Light Glows */}
+        <div className="absolute top-0 right-1/4 w-80 h-80 bg-[#00e39b]/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-[#38bdf8]/5 rounded-full blur-3xl pointer-events-none" />
+
         {tournament.imageUrl && (
           <img
-            className="absolute -right-12 -bottom-12 w-64 h-64 sm:w-96 sm:h-96 opacity-5 pointer-events-none object-contain blur-[1px]"
+            className="absolute -right-8 -bottom-8 w-60 h-60 sm:w-80 sm:h-80 opacity-5 pointer-events-none object-contain blur-[1px]"
             src={tournament.imageUrl}
             alt=""
             referrerPolicy="no-referrer"
@@ -226,53 +331,81 @@ export default function CompetitionDetail() {
           />
         )}
 
-        <div className="flex-shrink-0">
-          <Logo
-            url={tournament.imageUrl}
-            label={tournament.name}
-            size="xxl"
-          />
-        </div>
-
-        <div className="flex-1 min-w-0 text-center sm:text-left">
-          <div className="text-xs font-bold uppercase tracking-widest text-[#8b96ad]">
-            {tournament.sport?.name || "Sport"} · {tournament.type === "League" ? "Club / League" : "International"}
-          </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-extrabold uppercase tracking-wide text-white mt-1.5 leading-tight">
-            {tournament.name}
-          </h1>
-
-          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-3">
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#00e39b]/15 text-[#00e39b] border border-[#00e39b]/30">
-              {tournament.sport?.name || "Sport"}
-            </span>
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] text-[#8b96ad] border border-[#232c40]">
-              {tournament.type === "League" ? "Club / League" : "International Tournament"}
-            </span>
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => openEditTournamentModal(tournament)}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] text-[#f5c542] border border-[#f5c542]/40 hover:bg-[#f5c542]/10 hover:border-[#f5c542] transition-colors cursor-pointer"
-                title="Edit competition details"
-              >
-                <Edit2 size={12} /> Edit Competition
-              </button>
-            )}
+        <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-5 sm:gap-7">
+          <div className="flex-shrink-0">
+            <Logo
+              url={tournament.imageUrl}
+              label={tournament.name}
+              size="xl"
+            />
           </div>
 
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-4 mt-6 max-w-lg mx-auto sm:mx-0">
-            <div className="bg-[#121826]/80 backdrop-blur border border-[#232c40] rounded-xl p-3 text-center sm:text-left">
-              <b className="block text-xl sm:text-2xl font-display font-extrabold text-white leading-none">{compEditions.length}</b>
-              <span className="text-[10px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">Editions</span>
+          <div className="flex-1 min-w-0 text-center sm:text-left">
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#00e39b]">
+              <Trophy size={13} />
+              <span>
+                {tournament.sport?.name || "Sport"} · {tournament.type === "League" ? "Club / Franchise League" : "International Championship"}
+              </span>
             </div>
-            <div className="bg-[#121826]/80 backdrop-blur border border-[#232c40] rounded-xl p-3 text-center sm:text-left">
-              <b className="block text-xl sm:text-2xl font-display font-extrabold text-white leading-none">{winnerNames.size}</b>
-              <span className="text-[10px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">Winners</span>
+
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-black uppercase tracking-wide text-white mt-1 leading-tight">
+              {tournament.name}
+            </h1>
+
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-3">
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#00e39b]/15 text-[#00e39b] border border-[#00e39b]/30">
+                {tournament.sport?.name || "Sport"}
+              </span>
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] text-[#8b96ad] border border-[#232c40]">
+                {tournament.type === "League" ? "Club League" : "International Tournament"}
+              </span>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => openEditTournamentModal(tournament)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-500/15 text-sky-400 border border-sky-500/35 hover:bg-sky-500/25 transition-all cursor-pointer shadow-xs"
+                  title="Edit competition details"
+                >
+                  <Edit2 size={12} /> Edit Competition
+                </button>
+              )}
             </div>
-            <div className="bg-[#121826]/80 backdrop-blur border border-[#232c40] rounded-xl p-3 text-center sm:text-left">
-              <b className="block text-xl sm:text-2xl font-display font-extrabold text-[#f5c542] leading-none">{reigningEdition?.season || reigningEdition?.year || "—"}</b>
-              <span className="text-[10px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">Latest</span>
+
+            {/* Horizontal Stats Strip */}
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 sm:gap-6 mt-5 pt-4 border-t border-[#232c40]/80">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 font-display font-extrabold text-xl shadow-xs">
+                  {compEditions.length}
+                </div>
+                <div className="text-left leading-tight">
+                  <span className="block text-xs font-extrabold text-white uppercase tracking-wider">Editions</span>
+                  <span className="text-[10px] text-[#8b96ad] font-medium">Seasons Played</span>
+                </div>
+              </div>
+
+              <div className="hidden sm:block w-px h-8 bg-[#232c40]" />
+
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-display font-extrabold text-xl shadow-xs">
+                  {winnerNames.size}
+                </div>
+                <div className="text-left leading-tight">
+                  <span className="block text-xs font-extrabold text-white uppercase tracking-wider">Winners</span>
+                  <span className="text-[10px] text-[#8b96ad] font-medium">Unique Champions</span>
+                </div>
+              </div>
+
+              <div className="hidden sm:block w-px h-8 bg-[#232c40]" />
+
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 font-display font-extrabold text-base shadow-xs">
+                  {reigningEdition?.season || reigningEdition?.year || "—"}
+                </div>
+                <div className="text-left leading-tight">
+                  <span className="block text-xs font-extrabold text-[#f5c542] uppercase tracking-wider">Latest Season</span>
+                  <span className="text-[10px] text-[#8b96ad] font-medium">Active Champion Era</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -281,7 +414,7 @@ export default function CompetitionDetail() {
       {/* Champions & Runners-up History (Timeline & All-Time Summary) */}
       <section className="comp-history-section">
         {/* Section Header with Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-8 sm:mt-12 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6 sm:mt-8 mb-4">
           <div className="comp-history-title-area">
             <div className="comp-history-eyebrow">
               <Trophy size={14} style={{ color: "var(--gold)" }} />
@@ -317,123 +450,104 @@ export default function CompetitionDetail() {
                 <span>All-Time Summary</span>
               </button>
             </div>
-
-            {/* Sort toggle for Timeline */}
-            {historyView === "timeline" && compEditions.length > 1 && (
-              <button
-                type="button"
-                className="comp-sort-btn"
-                onClick={() =>
-                  setTimelineSort((prev) => (prev === "newest" ? "oldest" : "newest"))
-                }
-                title={
-                  timelineSort === "newest"
-                    ? "Currently showing Newest first. Click for Oldest first."
-                    : "Currently showing Oldest first. Click for Newest first."
-                }
-              >
-                <ArrowUpDown size={14} />
-                <span>{timelineSort === "newest" ? "Newest First" : "Oldest First"}</span>
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Quick Snapshot Highlight Strip */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 mt-6">
-          {/* Most Successful Club */}
-          <div className="comp-snapshot-card gold-accent">
-            <div className="comp-snapshot-icon gold">👑</div>
-            <div className="comp-snapshot-info">
-              <span className="comp-snapshot-label">Most Successful Club</span>
+        {/* Quick Snapshot Highlight Strip (Clean & Redesigned) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mt-3 mb-5">
+          {/* Card 1: Most Successful Club */}
+          <div className="bg-[#101726]/85 backdrop-blur border border-[#232c40] rounded-2xl p-4 flex items-center gap-3.5 hover:border-amber-500/40 transition-all shadow-md">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-lg flex-shrink-0">
+              👑
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="block text-[10px] font-extrabold text-[#8b96ad] uppercase tracking-wider">
+                Most Successful Club
+              </span>
               {mostSuccessfulTeam ? (
-                <div className="comp-snapshot-team">
+                <div className="flex items-center gap-2.5 mt-1 min-w-0">
                   <Logo
                     url={mostSuccessfulTeam.team?.imageUrl}
                     label={mostSuccessfulTeam.team?.name}
                     short={mostSuccessfulTeam.team?.short}
                     color={mostSuccessfulTeam.team?.color}
-                    size="sm"
+                    size="xs"
                   />
-                  <div className="comp-snapshot-team-text">
+                  <div className="min-w-0">
                     <Link
                       to={`/team/${mostSuccessfulTeam.team?._id}`}
-                      className="comp-snapshot-name"
+                      className="block text-sm font-extrabold text-white hover:text-[#00e39b] truncate transition-colors"
                     >
                       {mostSuccessfulTeam.team?.name}
                     </Link>
-                    <span className="comp-snapshot-metric">
-                      <b>{mostSuccessfulTeam.wins.length}</b> {mostSuccessfulTeam.wins.length === 1 ? "Title" : "Titles"}
+                    <span className="block text-xs font-semibold text-[#f5c542] mt-0.5">
+                      {mostSuccessfulTeam.wins.length} {mostSuccessfulTeam.wins.length === 1 ? "Title" : "Titles"}
                       {mostSuccessfulTeam.runnerUps.length > 0 && (
-                        <> · <b>{mostSuccessfulTeam.runnerUps.length}</b> {mostSuccessfulTeam.runnerUps.length === 1 ? "RU" : "RUs"}</>
+                        <span className="text-[#8b96ad]"> · {mostSuccessfulTeam.runnerUps.length} RU</span>
                       )}
                     </span>
                   </div>
                 </div>
               ) : (
-                <span className="comp-snapshot-empty">No champions recorded</span>
+                <span className="text-xs text-[#8b96ad] italic mt-1 block">No champions recorded</span>
               )}
             </div>
           </div>
 
-          {/* Reigning / Latest Champion */}
-          <div className="comp-snapshot-card green-accent">
-            <div className="comp-snapshot-icon green">🏆</div>
-            <div className="comp-snapshot-info">
-              <span className="comp-snapshot-label">
+          {/* Card 2: Reigning Champion (Without runner-up of last season) */}
+          <div className="bg-[#101726]/85 backdrop-blur border border-[#232c40] rounded-2xl p-4 flex items-center gap-3.5 hover:border-emerald-500/40 transition-all shadow-md">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-lg flex-shrink-0">
+              🏆
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="block text-[10px] font-extrabold text-[#8b96ad] uppercase tracking-wider">
                 Reigning Champion ({reigningEdition?.season || reigningEdition?.year || "—"})
               </span>
               {reigningWinner ? (
-                <div className="comp-snapshot-team">
+                <div className="flex items-center gap-2.5 mt-1 min-w-0">
                   <Logo
                     url={reigningWinner.imageUrl}
                     label={reigningWinner.name}
                     short={reigningWinner.short}
                     color={reigningWinner.color}
-                    size="sm"
+                    size="xs"
                   />
-                  <div className="comp-snapshot-team-text">
+                  <div className="min-w-0">
                     <Link
                       to={`/team/${reigningWinner._id}`}
-                      className="comp-snapshot-name"
+                      className="block text-sm font-extrabold text-white hover:text-[#00e39b] truncate transition-colors"
                     >
                       {reigningWinner.name}
                     </Link>
-                    <span className="comp-snapshot-metric sub">
-                      {reigningEdition?.shared ? (
-                        "Joint Champion"
-                      ) : reigningRunnerUp ? (
-                        <>
-                          Defeated{" "}
-                          <Link
-                            to={`/team/${reigningRunnerUp._id}`}
-                            style={{ color: "var(--silver)", textDecoration: "underline" }}
-                          >
-                            {reigningRunnerUp.name}
-                          </Link>
-                        </>
-                      ) : (
-                        "Champions"
-                      )}
+                    <span className="block text-xs font-semibold text-[#00e39b] mt-0.5">
+                      {reigningEdition?.shared ? "Joint Champions" : "Defending Champions"}
                     </span>
                   </div>
                 </div>
               ) : (
-                <span className="comp-snapshot-empty">No champion data</span>
+                <span className="text-xs text-[#8b96ad] italic mt-1 block">No champion data</span>
               )}
             </div>
           </div>
 
-          {/* Editions & Finalists KPIs */}
-          <div className="comp-snapshot-card kpi-card">
-            <div className="comp-snapshot-stat">
-              <span className="comp-snapshot-stat-val">{compEditions.length}</span>
-              <span className="comp-snapshot-stat-lbl">Editions Played</span>
+          {/* Card 3: Editions & Finalists KPIs */}
+          <div className="bg-[#101726]/85 backdrop-blur border border-[#232c40] rounded-2xl p-4 flex items-center justify-around shadow-md hover:border-[#33415e] transition-all">
+            <div className="text-center">
+              <span className="block font-display font-extrabold text-2xl text-white leading-none">
+                {compEditions.length}
+              </span>
+              <span className="text-[10px] font-bold text-[#8b96ad] uppercase tracking-wider mt-1 block">
+                Editions Played
+              </span>
             </div>
-            <div className="comp-snapshot-stat-div" />
-            <div className="comp-snapshot-stat">
-              <span className="comp-snapshot-stat-val">{finalistCount}</span>
-              <span className="comp-snapshot-stat-lbl">Unique Finalists</span>
+            <div className="w-px h-8 bg-[#232c40]" />
+            <div className="text-center">
+              <span className="block font-display font-extrabold text-2xl text-white leading-none">
+                {finalistCount}
+              </span>
+              <span className="text-[10px] font-bold text-[#8b96ad] uppercase tracking-wider mt-1 block">
+                Unique Finalists
+              </span>
             </div>
           </div>
         </div>
@@ -443,7 +557,7 @@ export default function CompetitionDetail() {
           <div className="comp-timeline-container">
             {timelineEditions.length === 0 ? (
               <div className="comp-empty-history">
-                <Calendar size={32} style={{ opacity: 0.4, marginBottom: "8px" }} />
+                <Calendar size={28} style={{ opacity: 0.4, marginBottom: "6px" }} />
                 <p>No tournament editions or finals recorded yet.</p>
               </div>
             ) : (
@@ -459,112 +573,82 @@ export default function CompetitionDetail() {
                         {/* Node milestone line & indicator */}
                         <div className="comp-node-anchor">
                           <div className="comp-node-dot" />
-                          <div className="comp-node-badge">
+                          <span className="comp-node-badge">
                             {edition.season || edition.year}
-                          </div>
+                          </span>
                         </div>
 
-                        {/* Matchup Card */}
-                        <div
-                          className="comp-timeline-card"
-                          style={{
-                            "--w-color": win?.color || "#eab308",
-                            "--ru-color": ru?.color || "#94a3b8",
-                          }}
-                        >
-                          {/* Shared Trophy Tag if applicable */}
+                        {/* Matchup Card - Compact */}
+                        <div className="comp-timeline-card">
                           {isShared && (
                             <div className="comp-card-shared-banner">
                               🤝 Joint Champions
                             </div>
                           )}
 
-                          {/* Winner Side */}
-                          <div className="comp-node-team winner-team">
-                            <div className="comp-node-role">
-                              <span className="role-tag gold">🏆 Winner</span>
-                            </div>
-                            {win ? (
-                              <Link
-                                to={`/team/${win._id}`}
-                                className="comp-node-team-content"
-                                title={`View ${win.name}`}
-                              >
+                          {/* Winner Row */}
+                          {win ? (
+                            <Link
+                              to={`/team/${win._id}`}
+                              className="comp-timeline-row winner"
+                              title={`Winner: ${win.name}`}
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                <span className="comp-row-medal">🏆</span>
                                 <Logo
                                   url={win.imageUrl}
                                   label={win.name}
                                   short={win.short}
                                   color={win.color}
-                                  size="md"
+                                  size="xs"
                                 />
-                                <div className="comp-node-team-info">
-                                  <span className="comp-team-label-name">
-                                    {win.name}
-                                  </span>
-                                  {win.short && (
-                                    <span className="comp-team-short-badge">
-                                      {win.short}
-                                    </span>
-                                  )}
-                                </div>
-                              </Link>
-                            ) : (
-                              <div className="comp-node-team-empty">
-                                <span className="comp-empty-dash">—</span>
-                                <span className="comp-empty-txt">Winner not set</span>
+                                <span className="comp-team-label-name">
+                                  {win.name}
+                                </span>
                               </div>
-                            )}
-                          </div>
-
-                          {/* Match Divider */}
-                          <div className="comp-node-divider">
-                            <span className="comp-vs-pill">FINAL</span>
-                          </div>
-
-                          {/* Runner-up Side */}
-                          <div className="comp-node-team runner-team">
-                            <div className="comp-node-role">
-                              <span
-                                className={`role-tag ${
-                                  isShared ? "gold" : "silver"
-                                }`}
-                              >
-                                {isShared ? "🏆 Joint Winner" : "🥈 Runner-up"}
-                              </span>
+                              <span className="comp-row-role-tag gold">W</span>
+                            </Link>
+                          ) : (
+                            <div className="comp-timeline-row empty">
+                              <span className="comp-row-medal">🏆</span>
+                              <span className="comp-empty-txt">Winner not set</span>
                             </div>
-                            {ru ? (
-                              <Link
-                                to={`/team/${ru._id}`}
-                                className="comp-node-team-content"
-                                title={`View ${ru.name}`}
-                              >
+                          )}
+
+                          <div className="comp-timeline-divider" />
+
+                          {/* Runner-up Row */}
+                          {ru ? (
+                            <Link
+                              to={`/team/${ru._id}`}
+                              className={`comp-timeline-row ${isShared ? "winner shared" : "runner"}`}
+                              title={isShared ? `Joint Champion: ${ru.name}` : `Runner-up: ${ru.name}`}
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                <span className="comp-row-medal">
+                                  {isShared ? "🏆" : "🥈"}
+                                </span>
                                 <Logo
                                   url={ru.imageUrl}
                                   label={ru.name}
                                   short={ru.short}
                                   color={ru.color}
-                                  size="md"
+                                  size="xs"
                                 />
-                                <div className="comp-node-team-info">
-                                  <span className="comp-team-label-name">
-                                    {ru.name}
-                                  </span>
-                                  {ru.short && (
-                                    <span className="comp-team-short-badge">
-                                      {ru.short}
-                                    </span>
-                                  )}
-                                </div>
-                              </Link>
-                            ) : (
-                              <div className="comp-node-team-empty">
-                                <span className="comp-empty-dash">—</span>
-                                <span className="comp-empty-txt">
-                                  Runner-up not set
+                                <span className="comp-team-label-name sub">
+                                  {ru.name}
                                 </span>
                               </div>
-                            )}
-                          </div>
+                              <span className={`comp-row-role-tag ${isShared ? "gold" : "silver"}`}>
+                                {isShared ? "W" : "RU"}
+                              </span>
+                            </Link>
+                          ) : (
+                            <div className="comp-timeline-row empty">
+                              <span className="comp-row-medal">🥈</span>
+                              <span className="comp-empty-txt">Runner-up not set</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -580,7 +664,7 @@ export default function CompetitionDetail() {
           <div className="comp-summary-container">
             {summaryLeaderboard.length === 0 ? (
               <div className="comp-empty-history">
-                <Crown size={32} style={{ opacity: 0.4, marginBottom: "8px" }} />
+                <Crown size={28} style={{ opacity: 0.4, marginBottom: "6px" }} />
                 <p>No tournament honours recorded yet.</p>
               </div>
             ) : (
@@ -588,17 +672,17 @@ export default function CompetitionDetail() {
                 <table className="comp-summary-table">
                   <thead>
                     <tr>
-                      <th style={{ width: "60px", textAlign: "center" }}>Rank</th>
-                      <th>Club / National Team</th>
-                      <th style={{ textAlign: "center", width: "110px" }}>
-                        <span className="tbl-header-badge gold">🏆 Winners</span>
+                      <th style={{ width: "54px", textAlign: "center", padding: "12px 14px" }}>#</th>
+                      <th style={{ minWidth: "220px", padding: "12px 16px" }}>Club / National Team</th>
+                      <th style={{ textAlign: "center", width: "95px", padding: "12px 14px" }}>
+                        <span className="tbl-header-badge gold">🏆 Titles</span>
                       </th>
-                      <th style={{ textAlign: "center", width: "120px" }}>
-                        <span className="tbl-header-badge silver">🥈 Runners-up</span>
+                      <th style={{ textAlign: "center", width: "95px", padding: "12px 14px" }}>
+                        <span className="tbl-header-badge silver">🥈 RU</span>
                       </th>
-                      <th style={{ textAlign: "center", width: "100px" }}>Total Finals</th>
-                      <th>Winning Seasons</th>
-                      <th>Runner-up Seasons</th>
+                      <th style={{ textAlign: "center", width: "75px", padding: "12px 14px" }}>Finals</th>
+                      <th style={{ minWidth: "260px", padding: "12px 18px" }}>Winning Seasons</th>
+                      <th style={{ minWidth: "220px", padding: "12px 18px" }} className="hidden sm:table-cell">Runner-up Seasons</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -607,18 +691,19 @@ export default function CompetitionDetail() {
                       const isTop1 = idx === 0 && item.wins.length > 0;
                       const isTop2 = idx === 1 && item.wins.length > 0;
                       const isTop3 = idx === 2 && item.wins.length > 0;
+                      const location = formatLocation(item.team.city, item.team.country);
 
                       return (
                         <tr
                           key={item.team._id || idx}
                           className={isTop1 ? "row-leader" : ""}
                         >
-                          <td style={{ textAlign: "center" }}>
-                            <div className="rank-badge">
+                          <td style={{ textAlign: "center", padding: "14px 12px" }}>
+                            <span className="rank-badge">
                               {isTop1 ? "🥇" : isTop2 ? "🥈" : isTop3 ? "🥉" : `#${idx + 1}`}
-                            </div>
+                            </span>
                           </td>
-                          <td>
+                          <td style={{ padding: "14px 16px" }}>
                             <Link
                               to={`/team/${item.team._id}`}
                               className="comp-tbl-team-cell"
@@ -634,63 +719,62 @@ export default function CompetitionDetail() {
                                 <span className="comp-tbl-team-name">
                                   {item.team.name}
                                 </span>
-                                {item.team.city && (
+                                {location && (
                                   <span className="comp-tbl-team-sub">
-                                    {item.team.city}
-                                    {item.team.country ? `, ${item.team.country}` : ""}
+                                    {location}
                                   </span>
                                 )}
                               </div>
                             </Link>
                           </td>
-                          <td style={{ textAlign: "center" }}>
-                            <span
-                              className={`count-pill gold ${
-                                item.wins.length > 0 ? "highlight" : "zero"
-                              }`}
-                            >
-                              {item.wins.length}
-                            </span>
+                          <td style={{ textAlign: "center", padding: "14px 12px" }}>
+                            {item.wins.length > 0 ? (
+                              <span className="count-pill gold highlight">
+                                {item.wins.length}
+                              </span>
+                            ) : (
+                              <span className="count-pill zero">—</span>
+                            )}
                           </td>
-                          <td style={{ textAlign: "center" }}>
-                            <span
-                              className={`count-pill silver ${
-                                item.runnerUps.length > 0 ? "highlight" : "zero"
-                              }`}
-                            >
-                              {item.runnerUps.length}
-                            </span>
+                          <td style={{ textAlign: "center", padding: "14px 12px" }}>
+                            {item.runnerUps.length > 0 ? (
+                              <span className="count-pill silver highlight">
+                                {item.runnerUps.length}
+                              </span>
+                            ) : (
+                              <span className="count-pill zero">—</span>
+                            )}
                           </td>
-                          <td style={{ textAlign: "center" }}>
+                          <td style={{ textAlign: "center", padding: "14px 12px" }}>
                             <span className="count-pill finals">
                               {totalFinals}
                             </span>
                           </td>
-                          <td>
-                            <div className="season-pills-list">
-                              {item.wins.length > 0 ? (
-                                item.wins.map((w, wIdx) => (
+                          <td style={{ padding: "14px 18px" }}>
+                            {item.wins.length > 0 ? (
+                              <div className="season-pills-list">
+                                {item.wins.map((w, wIdx) => (
                                   <span key={wIdx} className="season-pill win">
                                     {w.year}
                                   </span>
-                                ))
-                              ) : (
-                                <span className="text-muted">—</span>
-                              )}
-                            </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-[#64748b] text-xs font-mono">—</span>
+                            )}
                           </td>
-                          <td>
-                            <div className="season-pills-list">
-                              {item.runnerUps.length > 0 ? (
-                                item.runnerUps.map((ru, ruIdx) => (
+                          <td style={{ padding: "14px 18px" }} className="hidden sm:table-cell">
+                            {item.runnerUps.length > 0 ? (
+                              <div className="season-pills-list">
+                                {item.runnerUps.map((ru, ruIdx) => (
                                   <span key={ruIdx} className="season-pill ru">
                                     {ru.year}
                                   </span>
-                                ))
-                              ) : (
-                                <span className="text-muted">—</span>
-                              )}
-                            </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-[#64748b] text-xs font-mono">—</span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -768,11 +852,11 @@ export default function CompetitionDetail() {
                       <div className="edition-actions">
                         <button
                           type="button"
-                          className="btn-icon"
+                          className="btn-icon edit"
                           title="Edit edition"
                           onClick={() => openEditEditionModal(edition)}
                         >
-                          <Edit2 size={16} />
+                          <Edit2 size={15} />
                         </button>
                         <button
                           type="button"
@@ -780,7 +864,7 @@ export default function CompetitionDetail() {
                           title="Delete edition"
                           onClick={() => openDeleteConfirmModal(edition)}
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     )}

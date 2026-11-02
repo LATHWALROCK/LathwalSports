@@ -42,17 +42,19 @@ const LeagueTile = ({ title, logo, teams, _id, onDelete, onEdit, leagueData }) =
             onClick={handleEditClick}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
-            className="border border-black bg-gray-100 text-black rounded-full p-1 hover:bg-gray-200 transition"
+            className="border border-sky-500/40 bg-sky-500/20 text-sky-400 rounded-lg p-1.5 hover:bg-sky-500/30 hover:border-sky-400 hover:text-sky-200 transition-all shadow-md"
+            title="Edit edition"
           >
-            <Edit size={20} />
+            <Edit size={16} />
           </button>
           <button
             onClick={handleDeleteClick}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
-            className="border border-black bg-gray-100 text-black rounded-full p-1 hover:bg-gray-200 transition"
+            className="border border-rose-500/40 bg-rose-500/20 text-rose-400 rounded-lg p-1.5 hover:bg-rose-500/30 hover:border-rose-400 hover:text-rose-200 transition-all shadow-md"
+            title="Delete edition"
           >
-            <Trash2 size={20} />
+            <Trash2 size={16} />
           </button>
         </div>
       )}

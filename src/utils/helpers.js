@@ -46,3 +46,23 @@ export const fileToDataUrl = (file) => {
     reader.readAsDataURL(file);
   });
 };
+
+// Format city and country without duplicate values (e.g. "Chennai, Chennai" -> "Chennai")
+export const formatLocation = (city, country) => {
+  const c = String(city || "").trim();
+  const cntry = String(country || "").trim();
+
+  if (c && cntry) {
+    if (c.toLowerCase() === cntry.toLowerCase()) {
+      return c;
+    }
+    if (cntry.toLowerCase().startsWith(c.toLowerCase())) {
+      return cntry;
+    }
+    if (c.toLowerCase().endsWith(cntry.toLowerCase())) {
+      return c;
+    }
+    return `${c}, ${cntry}`;
+  }
+  return c || cntry || "";
+};
