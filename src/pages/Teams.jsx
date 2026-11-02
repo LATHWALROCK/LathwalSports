@@ -390,39 +390,49 @@ export default function Teams() {
   }, [sortedTeams]);
 
   return (
-    <div className="teams-page">
+    <div className="space-y-6 sm:space-y-8">
       {/* Page Header */}
-      <div className="teams-header">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <div className="eyebrow">Directory · Global Clubs &amp; National Teams</div>
-          <h1 className="teams-title">
-            <span className="bar" />
+          <div className="text-xs font-bold uppercase tracking-widest text-[#8b96ad]">
+            Directory · Global Clubs &amp; National Teams
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-display font-extrabold uppercase tracking-wide flex items-center gap-3 text-white mt-1">
+            <span className="w-1.5 h-7 rounded-full bg-[#00e39b]" />
             All Teams
           </h1>
-          <p className="teams-subtitle">
+          <p className="text-xs sm:text-sm text-[#8b96ad] mt-1 ml-4 max-w-2xl">
             Browse and filter clubs, national teams, franchise networks, and historical crests across every sport.
           </p>
         </div>
 
-        <div className="teams-header-actions">
+        <div className="flex flex-wrap items-center gap-3">
           {/* View Mode Toggle: Distinct Teams vs All Historical Eras */}
-          <div className="teams-view-toggle">
+          <div className="inline-flex items-center bg-[#121826] border border-[#232c40] rounded-full p-0.5">
             <button
               type="button"
-              className={viewMode === "active" ? "active" : ""}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                viewMode === "active"
+                  ? "bg-[#00e39b] text-[#07090f] shadow-sm font-bold"
+                  : "text-[#8b96ad] hover:text-white"
+              }`}
               onClick={() => setViewMode("active")}
               title="Group eras by team to view distinct clubs and national teams"
             >
-              <Shield size={14} style={{ display: "inline", verticalAlign: "-2px", marginRight: "5px" }} />
+              <Shield size={14} />
               Active Teams ({distinctTeams.length})
             </button>
             <button
               type="button"
-              className={viewMode === "all" ? "active" : ""}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                viewMode === "all"
+                  ? "bg-[#ffb21e] text-[#07090f] shadow-sm font-bold"
+                  : "text-[#8b96ad] hover:text-white"
+              }`}
               onClick={() => setViewMode("all")}
               title="View all individual historical era versions and past crests"
             >
-              <Layers size={14} style={{ display: "inline", verticalAlign: "-2px", marginRight: "5px" }} />
+              <Layers size={14} />
               All Eras ({allEraRecords.length})
             </button>
           </div>
@@ -431,11 +441,11 @@ export default function Teams() {
           {isAdmin && (
             <button
               type="button"
-              className="btn primary"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#f5c542] to-[#ff9f1c] text-[#07090f] font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all cursor-pointer"
               onClick={() => openCreateTeamModal({ role: "general" })}
               title="Add a new team to the directory"
             >
-              <Plus size={16} style={{ display: "inline", verticalAlign: "-2px", marginRight: "4px" }} />
+              <Plus size={16} />
               Add Team
             </button>
           )}
@@ -443,45 +453,41 @@ export default function Teams() {
       </div>
 
       {/* Overview Stat Counters Bar */}
-      <div className="teams-metrics-bar">
-        <div className="metric-item">
-          <b>{sortedTeams.length}</b>
-          <span>{viewMode === "active" ? "Clubs & Nations" : "Total Eras"}</span>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-4 p-3.5 sm:p-5 rounded-2xl bg-[#0d111b] border border-[#232c40]">
+        <div className="p-2 sm:p-2.5 text-center sm:text-left">
+          <b className="block text-xl sm:text-2xl font-display font-extrabold text-white leading-none">{sortedTeams.length}</b>
+          <span className="text-[11px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">
+            {viewMode === "active" ? "Clubs & Nations" : "Total Eras"}
+          </span>
         </div>
-        <div className="metric-divider" />
-        <div className="metric-item">
-          <b>{nationalCount}</b>
-          <span>National Teams</span>
+        <div className="p-2 sm:p-2.5 text-center sm:text-left border-l border-[#232c40]/60">
+          <b className="block text-xl sm:text-2xl font-display font-extrabold text-white leading-none">{nationalCount}</b>
+          <span className="text-[11px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">National Teams</span>
         </div>
-        <div className="metric-divider" />
-        <div className="metric-item">
-          <b>{clubCount}</b>
-          <span>Club Teams</span>
+        <div className="p-2 sm:p-2.5 text-center sm:text-left border-l border-[#232c40]/60">
+          <b className="block text-xl sm:text-2xl font-display font-extrabold text-white leading-none">{clubCount}</b>
+          <span className="text-[11px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">Club Teams</span>
         </div>
-        <div className="metric-divider" />
-        <div className="metric-item gold">
-          <b>🏆 {totalHonoursWon}</b>
-          <span>Titles Aggregated</span>
+        <div className="p-2 sm:p-2.5 text-center sm:text-left border-l border-[#232c40]/60">
+          <b className="block text-xl sm:text-2xl font-display font-extrabold text-[#f5c542] leading-none">🏆 {totalHonoursWon}</b>
+          <span className="text-[11px] sm:text-xs text-[#f5c542] font-semibold uppercase tracking-wider mt-1 block">Titles Aggregated</span>
         </div>
         {groupClubsCount > 0 && (
-          <>
-            <div className="metric-divider" />
-            <div className="metric-item">
-              <b>{groupClubsCount}</b>
-              <span>In Franchise Groups</span>
-            </div>
-          </>
+          <div className="p-2 sm:p-2.5 text-center sm:text-left border-l border-[#232c40]/60 col-span-2 sm:col-span-1">
+            <b className="block text-xl sm:text-2xl font-display font-extrabold text-white leading-none">{groupClubsCount}</b>
+            <span className="text-[11px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">In Franchise Groups</span>
+          </div>
         )}
       </div>
 
-      {/* Main Luxury Filter Bar */}
-      <div className="teams-filters-panel">
-        <div className="teams-filters-grid">
+      {/* Main Filter Bar */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-[#0d111b] border border-[#232c40] space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Search Field */}
-          <div className="teams-field search-field">
-            <label htmlFor="team-search">Search Teams</label>
-            <div className="teams-search-wrap">
-              <Search size={16} className="teams-search-icon" />
+          <div className="sm:col-span-2 flex flex-col gap-1.5">
+            <label htmlFor="team-search" className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Search Teams</label>
+            <div className="relative">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5d6880]" />
               <input
                 id="team-search"
                 type="search"
@@ -489,11 +495,12 @@ export default function Teams() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoComplete="off"
+                className="w-full h-11 pl-10 pr-9 rounded-xl bg-[#121826] border border-[#232c40] text-sm text-white placeholder-[#5d6880] focus:border-[#00e39b] focus:outline-none transition-colors"
               />
               {searchQuery && (
                 <button
                   type="button"
-                  className="teams-search-clear"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8b96ad] hover:text-white"
                   onClick={() => setSearchQuery("")}
                   title="Clear search"
                 >
@@ -504,13 +511,12 @@ export default function Teams() {
           </div>
 
           {/* Sport Filter */}
-          <div className="teams-field">
-            <label>Sport</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Sport</label>
             <Picklist
               value={selectedSport}
               onChange={(val) => {
                 setSelectedSport(val);
-                // Reset tournament if not matching sport
                 setSelectedTournament("all");
               }}
               options={sportOptions}
@@ -519,8 +525,8 @@ export default function Teams() {
           </div>
 
           {/* Type Filter */}
-          <div className="teams-field">
-            <label>Team Type</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Team Type</label>
             <Picklist
               value={selectedType}
               onChange={(val) => {
@@ -533,8 +539,8 @@ export default function Teams() {
           </div>
 
           {/* Competition Filter */}
-          <div className="teams-field">
-            <label>Competition</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Competition</label>
             <Picklist
               value={selectedTournament}
               onChange={(val) => setSelectedTournament(val)}
@@ -545,8 +551,8 @@ export default function Teams() {
           </div>
 
           {/* Franchise Group Filter */}
-          <div className="teams-field">
-            <label>Franchise Group</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Franchise Group</label>
             <Picklist
               value={selectedGroup}
               onChange={(val) => setSelectedGroup(val)}
@@ -557,8 +563,8 @@ export default function Teams() {
           </div>
 
           {/* Honours Filter */}
-          <div className="teams-field">
-            <label>Trophies &amp; Honours</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Trophies &amp; Honours</label>
             <Picklist
               value={selectedHonours}
               onChange={(val) => setSelectedHonours(val)}
@@ -568,8 +574,8 @@ export default function Teams() {
           </div>
 
           {/* Sort By */}
-          <div className="teams-field">
-            <label>Sort By</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Sort By</label>
             <Picklist
               value={sortBy}
               onChange={(val) => setSortBy(val)}
@@ -581,59 +587,59 @@ export default function Teams() {
 
         {/* Active Filter Chips & Reset Bar */}
         {isFiltered && (
-          <div className="teams-active-bar">
-            <div className="teams-active-chips">
-              <span className="teams-chips-label">Active Filters:</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#232c40]/60">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold uppercase text-[#5d6880]">Active Filters:</span>
 
               {searchQuery && (
-                <span className="teams-filter-pill">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] border border-[#232c40] text-[#eef2f8]">
                   Search: "{searchQuery}"
-                  <button type="button" onClick={() => setSearchQuery("")}>
+                  <button type="button" onClick={() => setSearchQuery("")} className="hover:text-red-400">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {selectedSport !== "all" && (
-                <span className="teams-filter-pill">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] border border-[#232c40] text-[#00e39b]">
                   Sport: {sports.find((s) => s._id === selectedSport)?.name || selectedSport}
-                  <button type="button" onClick={() => setSelectedSport("all")}>
+                  <button type="button" onClick={() => setSelectedSport("all")} className="hover:text-red-400">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {selectedType !== "all" && (
-                <span className="teams-filter-pill">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] border border-[#232c40] text-[#ffb21e]">
                   Type: {selectedType === "National" ? "National Teams" : "Club Teams"}
-                  <button type="button" onClick={() => setSelectedType("all")}>
+                  <button type="button" onClick={() => setSelectedType("all")} className="hover:text-red-400">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {selectedTournament !== "all" && (
-                <span className="teams-filter-pill">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] border border-[#232c40] text-[#00e39b]">
                   Competition: {tournaments.find((t) => t._id === selectedTournament)?.name || selectedTournament}
-                  <button type="button" onClick={() => setSelectedTournament("all")}>
+                  <button type="button" onClick={() => setSelectedTournament("all")} className="hover:text-red-400">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {selectedGroup !== "all" && (
-                <span className="teams-filter-pill">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] border border-[#232c40] text-[#f5c542]">
                   Group: {selectedGroup === "any-group" ? "Any Group" : selectedGroup}
-                  <button type="button" onClick={() => setSelectedGroup("all")}>
+                  <button type="button" onClick={() => setSelectedGroup("all")} className="hover:text-red-400">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {selectedHonours !== "all" && (
-                <span className="teams-filter-pill">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] border border-[#232c40] text-[#f5c542]">
                   Honours: {honoursOptions.find((h) => h.value === selectedHonours)?.label}
-                  <button type="button" onClick={() => setSelectedHonours("all")}>
+                  <button type="button" onClick={() => setSelectedHonours("all")} className="hover:text-red-400">
                     <X size={12} />
                   </button>
                 </span>
@@ -642,7 +648,7 @@ export default function Teams() {
 
             <button
               type="button"
-              className="teams-reset-btn"
+              className="text-xs text-[#8b96ad] hover:text-white font-semibold underline underline-offset-2 transition-colors ml-auto cursor-pointer"
               onClick={handleResetFilters}
             >
               Reset All Filters
@@ -652,18 +658,22 @@ export default function Teams() {
       </div>
 
       {/* Teams Results Counter */}
-      <div className="teams-results-header">
+      <div className="flex items-center justify-between mt-6 mb-4">
         <div>
-          <span className="results-count">
-            Showing <strong>{displayedTeams.length}</strong> of <strong>{sortedTeams.length}</strong> teams
+          <span className="text-xs sm:text-sm text-[#8b96ad]">
+            Showing <strong className="text-white">{displayedTeams.length}</strong> of <strong className="text-white">{sortedTeams.length}</strong> teams
           </span>
-          {isFiltered && <span className="results-filter-badge">Filtered</span>}
+          {isFiltered && (
+            <span className="ml-2.5 text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#00e39b]/15 text-[#00e39b] border border-[#00e39b]/30">
+              Filtered
+            </span>
+          )}
         </div>
       </div>
 
       {/* Teams Cards Grid */}
       {displayedTeams.length > 0 ? (
-        <div className="teams-grid">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
           {displayedTeams.map((team) => {
             const hasMultipleEras = (team.erasCount || 1) > 1;
             const hasGroup = Boolean(team.groupIdentifier || team.groupName);

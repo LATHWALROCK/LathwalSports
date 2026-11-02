@@ -182,67 +182,70 @@ export default function TeamDetail() {
   const latestTitle = titleWins.slice().sort((a, b) => (b.year || 0) - (a.year || 0))[0];
 
   return (
-    <div>
+    <div className="space-y-6 sm:space-y-8">
       <button
         type="button"
-        className="back"
+        className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#8b96ad] hover:text-white transition-colors cursor-pointer mb-2"
         onClick={() => navigate(-1)}
       >
         ← Back
       </button>
 
       {/* Team Profile Header */}
-      <section className="detail-head">
-        <Logo
-          url={currentVersion.imageUrl}
-          label={currentVersion.name}
-          size="xxl"
-        />
+      <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 bg-gradient-to-br from-[#0f1a2b] via-[#0b1220] to-[#121826] border border-[#232c40] flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
+        <div className="flex-shrink-0">
+          <Logo
+            url={currentVersion.imageUrl}
+            label={currentVersion.name}
+            size="xxl"
+          />
+        </div>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", flexWrap: "wrap" }}>
+        <div className="flex-1 min-w-0 text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
-              <div className="eyebrow">
+              <div className="text-xs font-bold uppercase tracking-widest text-[#8b96ad]">
                 Team Profile · {currentVersion.city || currentVersion.country || currentVersion.type || "Club"}
               </div>
-              <h1 style={{ marginTop: "6px" }}>{currentVersion.name}</h1>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-extrabold uppercase tracking-wide text-white mt-1.5 leading-tight">
+                {currentVersion.name}
+              </h1>
             </div>
 
             {isAdmin && (
               <button
                 type="button"
-                className="btn ghost sm"
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#121826] border border-[#232c40] hover:border-[#36425e] text-xs font-semibold text-white transition-all self-center sm:self-start cursor-pointer"
                 onClick={() => openEditTeamModal(currentVersion)}
                 title="Edit this team version"
-                style={{ marginTop: "4px" }}
               >
-                <Edit2 size={14} style={{ display: "inline", verticalAlign: "-2px", marginRight: "4px" }} />
+                <Edit2 size={13} />
                 Edit Team
               </button>
             )}
           </div>
 
-          <div className="meta">
-            <span className="pill football">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-3">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#00e39b]/15 text-[#00e39b] border border-[#00e39b]/30">
               {currentVersion.sport?.name || "Sport"}
             </span>
-            <span className="pill">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] text-[#8b96ad] border border-[#232c40]">
               {currentVersion.type === "National" ? "National Team" : "Club / League"}
             </span>
             {currentGroupId && (
-              <span className="pill gold" title={`Belongs to ${currentGroupName} network`}>
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#f5c542]/15 text-[#f5c542] border border-[#f5c542]/30" title={`Belongs to ${currentGroupName} network`}>
                 🌐 {currentGroupName}
               </span>
             )}
-            <span className="pill" style={{ letterSpacing: "0.5px" }}>
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] text-[#8b96ad] border border-[#232c40] font-mono">
               ID: {teamIdentifier}
             </span>
           </div>
 
           {/* Associated Competitions Pills */}
           {associatedTournaments.length > 0 && (
-            <div className="team-associated-comps" style={{ marginTop: "10px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px" }}>
-              <span style={{ fontSize: "12px", color: "var(--muted)", marginRight: "2px" }}>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mt-3 pt-3 border-t border-[#232c40]/60">
+              <span className="text-xs text-[#8b96ad] mr-1">
                 Associated Competitions:
               </span>
               {associatedTournaments.map((tObj) => {
@@ -251,7 +254,7 @@ export default function TeamDetail() {
                   <Link
                     key={tourData._id || tourData.name}
                     to={`/competition/${tourData._id}`}
-                    className="comp-link-pill"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#121826] border border-[#232c40] hover:border-[#36425e] text-[#eef2f8] transition-all"
                   >
                     {tourData.imageUrl && (
                       <Logo url={tourData.imageUrl} label={tourData.name} size="xs" />
@@ -263,34 +266,34 @@ export default function TeamDetail() {
             </div>
           )}
 
-          <div className="kpis">
-            <div className="kpi">
-              <b style={{ color: "var(--gold)" }}>{titleWins.length}</b>
-              <span>Titles</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mt-6 max-w-2xl mx-auto sm:mx-0">
+            <div className="bg-[#121826]/80 backdrop-blur border border-[#232c40] rounded-xl p-3 text-center sm:text-left">
+              <b className="block text-xl sm:text-2xl font-display font-extrabold text-[#f5c542] leading-none">{titleWins.length}</b>
+              <span className="text-[10px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">Titles</span>
             </div>
-            <div className="kpi">
-              <b style={{ color: "var(--silver)" }}>{runnerUpFinishes.length}</b>
-              <span>Runner-up Finishes</span>
+            <div className="bg-[#121826]/80 backdrop-blur border border-[#232c40] rounded-xl p-3 text-center sm:text-left">
+              <b className="block text-xl sm:text-2xl font-display font-extrabold text-[#b9c3d6] leading-none">{runnerUpFinishes.length}</b>
+              <span className="text-[10px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">Runner-ups</span>
             </div>
-            <div className="kpi">
-              <b>{allParticipations.length}</b>
-              <span>Editions Participated</span>
+            <div className="bg-[#121826]/80 backdrop-blur border border-[#232c40] rounded-xl p-3 text-center sm:text-left">
+              <b className="block text-xl sm:text-2xl font-display font-extrabold text-white leading-none">{allParticipations.length}</b>
+              <span className="text-[10px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">Editions</span>
             </div>
-            <div className="kpi">
-              <b>{latestTitle?.season || latestTitle?.year || "—"}</b>
-              <span>Latest Title</span>
+            <div className="bg-[#121826]/80 backdrop-blur border border-[#232c40] rounded-xl p-3 text-center sm:text-left">
+              <b className="block text-xl sm:text-2xl font-display font-extrabold text-[#00e39b] leading-none">{latestTitle?.season || latestTitle?.year || "—"}</b>
+              <span className="text-[10px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">Latest Title</span>
             </div>
           </div>
 
           {/* Trophy Cabinet */}
           {titleWins.length > 0 && (
-            <div className="trophy-cabinet">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-4 pt-4 border-t border-[#232c40]/60">
               {compList
                 .filter((item) => item.wins.length > 0)
                 .map((item) => (
                   <Link
                     key={item.tournament?._id || item.tournament?.name}
-                    className="t"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#121826] border border-[#232c40] hover:border-[#f5c542]/40 text-xs text-white transition-all hover:-translate-y-0.5"
                     to={`/competition/${item.tournament?._id}`}
                   >
                     <Logo
@@ -298,8 +301,8 @@ export default function TeamDetail() {
                       label={item.tournament?.name}
                       size="xs"
                     />
-                    <span>{item.tournament?.name}</span>
-                    <b>×{item.wins.length}</b>
+                    <span className="font-medium">{item.tournament?.name}</span>
+                    <b className="text-[#f5c542] font-bold">×{item.wins.length}</b>
                   </Link>
                 ))}
             </div>

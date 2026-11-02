@@ -73,102 +73,111 @@ export default function Explore() {
   const displayedEditions = filteredEditions.slice(0, limit);
 
   return (
-    <div>
-      <div className="section-head" style={{ marginTop: "4px" }}>
-        <div>
-          <h2 style={{ fontSize: "38px" }}>
-            <span className="bar" />
-            Explore Winners
-          </h2>
-          <p>Filter every edition by sport, competition format, team, or year</p>
-        </div>
+    <div className="space-y-6 sm:space-y-8">
+      <div>
+        <h2 className="text-3xl sm:text-4xl font-display font-extrabold uppercase tracking-wide flex items-center gap-3 text-white">
+          <span className="w-1.5 h-7 rounded-full bg-[#00e39b]" />
+          Explore Winners
+        </h2>
+        <p className="text-xs sm:text-sm text-[#8b96ad] mt-1 ml-4">
+          Filter every edition by sport, competition format, team, or year
+        </p>
       </div>
 
       {/* Filter Bar Grid */}
-      <div className="explore-filters">
-        <div className="field">
-          <label htmlFor="f-team">Team Name</label>
-          <input
-            id="f-team"
-            type="search"
-            placeholder="e.g. Real Madrid, India…"
-            value={teamQuery}
-            onChange={(e) => setTeamQuery(e.target.value)}
-          />
-        </div>
+      <div className="p-4 sm:p-5 rounded-2xl bg-[#0d111b] border border-[#232c40]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="f-team" className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Team Name</label>
+            <input
+              id="f-team"
+              type="search"
+              placeholder="e.g. Real Madrid, India…"
+              value={teamQuery}
+              onChange={(e) => setTeamQuery(e.target.value)}
+              className="w-full h-11 px-3.5 rounded-xl bg-[#121826] border border-[#232c40] text-sm text-white placeholder-[#5d6880] focus:border-[#00e39b] focus:outline-none transition-colors"
+            />
+          </div>
 
-        <div className="field">
-          <label htmlFor="f-sport">Sport</label>
-          <Picklist
-            id="f-sport"
-            value={selectedSport}
-            onChange={(val) => {
-              setSelectedSport(val);
-              setSelectedTournament("all");
-            }}
-            options={[
-              { value: "all", label: "All Sports" },
-              ...sports.map((s) => ({
-                value: s._id,
-                label: s.name,
-                logo: s.imageUrl,
-              })),
-            ]}
-          />
-        </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="f-sport" className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Sport</label>
+            <Picklist
+              id="f-sport"
+              value={selectedSport}
+              onChange={(val) => {
+                setSelectedSport(val);
+                setSelectedTournament("all");
+              }}
+              options={[
+                { value: "all", label: "All Sports" },
+                ...sports.map((s) => ({
+                  value: s._id,
+                  label: s.name,
+                  logo: s.imageUrl,
+                })),
+              ]}
+            />
+          </div>
 
-        <div className="field">
-          <label htmlFor="f-kind">Type</label>
-          <Picklist
-            id="f-kind"
-            value={selectedKind}
-            onChange={(val) => setSelectedKind(val)}
-            options={[
-              { value: "all", label: "Tournaments & Leagues" },
-              { value: "tournament", label: "Tournaments" },
-              { value: "league", label: "Leagues" },
-            ]}
-          />
-        </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="f-kind" className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Type</label>
+            <Picklist
+              id="f-kind"
+              value={selectedKind}
+              onChange={(val) => setSelectedKind(val)}
+              options={[
+                { value: "all", label: "Tournaments & Leagues" },
+                { value: "tournament", label: "Tournaments" },
+                { value: "league", label: "Leagues" },
+              ]}
+            />
+          </div>
 
-        <div className="field">
-          <label htmlFor="f-comp">Competition</label>
-          <Picklist
-            id="f-comp"
-            value={selectedTournament}
-            onChange={(val) => setSelectedTournament(val)}
-            options={[
-              { value: "all", label: "All Competitions" },
-              ...filteredTournaments.map((t) => ({
-                value: t._id,
-                label: t.name,
-                sub: t.type === "League" ? "Club" : "International",
-                logo: t.imageUrl,
-              })),
-            ]}
-          />
-        </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="f-comp" className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Competition</label>
+            <Picklist
+              id="f-comp"
+              value={selectedTournament}
+              onChange={(val) => setSelectedTournament(val)}
+              options={[
+                { value: "all", label: "All Competitions" },
+                ...filteredTournaments.map((t) => ({
+                  value: t._id,
+                  label: t.name,
+                  sub: t.type === "League" ? "Club" : "International",
+                  logo: t.imageUrl,
+                })),
+              ]}
+              searchable
+            />
+          </div>
 
-        <div className="field">
-          <label htmlFor="f-year">Year</label>
-          <input
-            id="f-year"
-            type="number"
-            placeholder="e.g. 2024"
-            value={yearQuery}
-            onChange={(e) => setYearQuery(e.target.value)}
-          />
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="f-year" className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Year</label>
+            <input
+              id="f-year"
+              type="number"
+              placeholder="e.g. 2024"
+              value={yearQuery}
+              onChange={(e) => setYearQuery(e.target.value)}
+              className="w-full h-11 px-3.5 rounded-xl bg-[#121826] border border-[#232c40] text-sm text-white placeholder-[#5d6880] focus:border-[#00e39b] focus:outline-none transition-colors"
+            />
+          </div>
         </div>
       </div>
 
       {/* Results Header */}
-      <div className="result-count">
-        <span>
-          <b style={{ color: "var(--text)" }}>{filteredEditions.length}</b> edition
+      <div className="flex items-center justify-between mt-6 mb-4">
+        <span className="text-xs sm:text-sm text-[#8b96ad]">
+          <b className="text-white">{filteredEditions.length}</b> edition
           {filteredEditions.length === 1 ? "" : "s"} found
         </span>
         {isFiltered && (
-          <button type="button" className="btn ghost" onClick={resetFilters}>
+          <button
+            type="button"
+            className="text-xs text-[#8b96ad] hover:text-white font-semibold underline underline-offset-2 transition-colors cursor-pointer"
+            onClick={resetFilters}
+          >
             Clear filters ✕
           </button>
         )}
@@ -176,7 +185,7 @@ export default function Explore() {
 
       {/* Results Grid */}
       {displayedEditions.length > 0 ? (
-        <div className="tournaments-grid">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
           {displayedEditions.map((edition) => {
             const tour = edition.tournament;
             const isLeague = tour?.type === "League";

@@ -214,10 +214,10 @@ export default function CompetitionDetail() {
       </Link>
 
       {/* Detail Header */}
-      <section className="detail-head">
+      <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 bg-gradient-to-br from-[#0f1a2b] via-[#0b1220] to-[#121826] border border-[#232c40] flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
         {tournament.imageUrl && (
           <img
-            className="watermark"
+            className="absolute -right-12 -bottom-12 w-64 h-64 sm:w-96 sm:h-96 opacity-5 pointer-events-none object-contain blur-[1px]"
             src={tournament.imageUrl}
             alt=""
             referrerPolicy="no-referrer"
@@ -225,39 +225,43 @@ export default function CompetitionDetail() {
           />
         )}
 
-        <Logo
-          url={tournament.imageUrl}
-          label={tournament.name}
-          size="xxl"
-        />
+        <div className="flex-shrink-0">
+          <Logo
+            url={tournament.imageUrl}
+            label={tournament.name}
+            size="xxl"
+          />
+        </div>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="eyebrow">
+        <div className="flex-1 min-w-0 text-center sm:text-left">
+          <div className="text-xs font-bold uppercase tracking-widest text-[#8b96ad]">
             {tournament.sport?.name || "Sport"} · {tournament.type === "League" ? "Club / League" : "International"}
           </div>
-          <h1 style={{ marginTop: "6px" }}>{tournament.name}</h1>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-extrabold uppercase tracking-wide text-white mt-1.5 leading-tight">
+            {tournament.name}
+          </h1>
 
-          <div className="meta">
-            <span className="pill football">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-3">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#00e39b]/15 text-[#00e39b] border border-[#00e39b]/30">
               {tournament.sport?.name || "Sport"}
             </span>
-            <span className="pill">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] text-[#8b96ad] border border-[#232c40]">
               {tournament.type === "League" ? "Club / League" : "International Tournament"}
             </span>
           </div>
 
-          <div className="kpis">
-            <div className="kpi">
-              <b>{compEditions.length}</b>
-              <span>Editions</span>
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-4 mt-6 max-w-lg mx-auto sm:mx-0">
+            <div className="bg-[#121826]/80 backdrop-blur border border-[#232c40] rounded-xl p-3 text-center sm:text-left">
+              <b className="block text-xl sm:text-2xl font-display font-extrabold text-white leading-none">{compEditions.length}</b>
+              <span className="text-[10px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">Editions</span>
             </div>
-            <div className="kpi">
-              <b>{winnerNames.size}</b>
-              <span>Different Winners</span>
+            <div className="bg-[#121826]/80 backdrop-blur border border-[#232c40] rounded-xl p-3 text-center sm:text-left">
+              <b className="block text-xl sm:text-2xl font-display font-extrabold text-white leading-none">{winnerNames.size}</b>
+              <span className="text-[10px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">Winners</span>
             </div>
-            <div className="kpi">
-              <b>{reigningEdition?.season || reigningEdition?.year || "—"}</b>
-              <span>Latest Edition</span>
+            <div className="bg-[#121826]/80 backdrop-blur border border-[#232c40] rounded-xl p-3 text-center sm:text-left">
+              <b className="block text-xl sm:text-2xl font-display font-extrabold text-[#f5c542] leading-none">{reigningEdition?.season || reigningEdition?.year || "—"}</b>
+              <span className="text-[10px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">Latest</span>
             </div>
           </div>
         </div>
@@ -266,21 +270,21 @@ export default function CompetitionDetail() {
       {/* Champions & Runners-up History (Timeline & All-Time Summary) */}
       <section className="comp-history-section">
         {/* Section Header with Controls */}
-        <div className="comp-history-header">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-8 sm:mt-12 mb-4">
           <div className="comp-history-title-area">
             <div className="comp-history-eyebrow">
               <Trophy size={14} style={{ color: "var(--gold)" }} />
               <span>Finals &amp; Honours Archive</span>
             </div>
-            <h2 className="comp-history-title">Winners &amp; Runners-up</h2>
-            <p className="comp-history-subtitle">
+            <h2 className="text-2xl sm:text-3xl font-display font-extrabold uppercase tracking-wide text-white">Winners &amp; Runners-up</h2>
+            <p className="text-xs sm:text-sm text-[#8b96ad] mt-1">
               {historyView === "timeline"
                 ? "Chronological timeline of championship finals and runners-up"
                 : "All-time leaderboard of tournament titles and final appearances"}
             </p>
           </div>
 
-          <div className="comp-history-actions">
+          <div className="flex items-center gap-2.5 flex-wrap">
             {/* View Mode Switcher: Timeline vs Summary */}
             <div className="comp-view-switcher">
               <button
@@ -325,7 +329,7 @@ export default function CompetitionDetail() {
         </div>
 
         {/* Quick Snapshot Highlight Strip */}
-        <div className="comp-snapshot-strip">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 mt-6">
           {/* Most Successful Club */}
           <div className="comp-snapshot-card gold-accent">
             <div className="comp-snapshot-icon gold">👑</div>

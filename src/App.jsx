@@ -21,12 +21,12 @@ import "./App.css";
 
 function AppContent() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+    <div className="min-h-screen flex flex-col bg-[#07090f] text-[#eef2f8] selection:bg-[#00e39b]/30 selection:text-white">
       <ScrollToTop />
       <Topbar />
 
-      <main style={{ flex: 1 }}>
-        <div className="wrap">
+      <main className="flex-1 py-5 sm:py-8 lg:py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/tournaments" element={<Tournaments />} />
@@ -45,8 +45,8 @@ function AppContent() {
         </div>
       </main>
 
-      <footer>
-        <div className="wrap">
+      <footer className="border-t border-[#232c40] bg-[#07090f]/80 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between text-xs text-[#8b96ad] gap-2 text-center sm:text-left">
           <span>Champions Tracker · Comprehensive Sports Winners &amp; Roll of Honour</span>
           <span>Logos and trademarks belong to their respective owners.</span>
         </div>

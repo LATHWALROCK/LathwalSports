@@ -1,5 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   --bg: #07090f;
   --bg-2: #0d111b;
@@ -121,7 +125,20 @@ button {
 .wrap {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 16px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .wrap {
+    padding: 0 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .wrap {
+    padding: 0 32px;
+  }
 }
 
 /* ---------- Top bar ---------- */
@@ -332,22 +349,24 @@ button {
   box-shadow: 0 6px 20px rgba(245, 197, 66, 0.5);
 }
 
-/* ---------- Logos ---------- */
+/* ---------- Logos (Luxury Rounded Square Badges) ---------- */
 .logo {
   --s: 40px;
   width: var(--s);
   height: var(--s);
   flex: 0 0 var(--s);
-  border-radius: 20%;
-  background: radial-gradient(circle at 50% 35%, #ffffff, #f1f4f9);
+  border-radius: clamp(6px, calc(var(--s) * 0.22), 24px);
+  background: linear-gradient(145deg, #ffffff 0%, #f6f8fb 60%, #e9edf5 100%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
-  padding: calc(var(--s) * 0.12);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+  padding: calc(var(--s) * 0.11);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 2px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
 }
 
 .logo img {
@@ -357,6 +376,7 @@ button {
   height: auto;
   object-fit: contain;
   display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.12));
 }
 
 .logo b,
@@ -372,8 +392,9 @@ button {
 }
 
 .logo.fail {
-  background: var(--c, #333);
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.25);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--c, #1e293b) 75%, #ffffff), var(--c, #1e293b) 50%, #0d121c 100%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
   padding: 0;
 }
 
@@ -386,12 +407,12 @@ button {
   display: block !important;
 }
 
-.logo.xs { --s: 24px; border-radius: 6px; padding: 2px; }
-.logo.sm { --s: 32px; border-radius: 8px; padding: 3px; }
+.logo.xs { --s: 24px; border-radius: 6px; padding: 2.5px; }
+.logo.sm { --s: 32px; border-radius: 8px; padding: 3.5px; }
 .logo.md { --s: 48px; border-radius: 12px; padding: 5px; }
-.logo.lg { --s: 76px; border-radius: 18px; padding: 8px; }
-.logo.xl { --s: 112px; border-radius: 24px; padding: 12px; }
-.logo.xxl { --s: 150px; border-radius: 30px; padding: 16px; }
+.logo.lg { --s: 76px; border-radius: 16px; padding: 8px; }
+.logo.xl { --s: 112px; border-radius: 22px; padding: 11px; }
+.logo.xxl { --s: 150px; border-radius: 28px; padding: 15px; }
 
 /* ---------- Common Components ---------- */
 .eyebrow {
@@ -1982,7 +2003,7 @@ main {
 
 .participant-pill .logo.sm {
   --s: 26px;
-  border-radius: 50%;
+  border-radius: 7px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   flex-shrink: 0;
 }
@@ -2356,11 +2377,11 @@ a.tm:hover .nm {
   width: 26px !important;
   height: 26px !important;
   flex: 0 0 26px !important;
-  border-radius: 50% !important;
-  background: #ffffff !important;
-  padding: 2px !important;
+  border-radius: 7px !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f6f8fb 100%) !important;
+  padding: 2.5px !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
 }
 
 .picklist-trigger-content .logo img {
@@ -2637,7 +2658,7 @@ a.tm:hover .nm {
   width: 28px;
   height: 28px;
   flex: 0 0 28px;
-  border-radius: 50%;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px dashed rgba(255, 255, 255, 0.24);
   display: flex;
@@ -2658,13 +2679,14 @@ a.tm:hover .nm {
   width: 24px;
   height: 24px;
   flex: 0 0 24px;
+  border-radius: 7px;
 }
 
 .picklist-initials-badge {
   width: 28px;
   height: 28px;
   flex: 0 0 28px;
-  border-radius: 50%;
+  border-radius: 8px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
   border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
@@ -2681,6 +2703,7 @@ a.tm:hover .nm {
   width: 24px;
   height: 24px;
   flex: 0 0 24px;
+  border-radius: 7px;
   font-size: 10px;
 }
 
@@ -2692,17 +2715,17 @@ a.tm:hover .nm {
   flex: 1;
 }
 
-/* Circular Team Crest inside options */
+/* Rounded Square Team Crest inside options */
 .picklist-option-left .logo {
   --s: 28px !important;
   width: 28px !important;
   height: 28px !important;
   flex: 0 0 28px !important;
-  border-radius: 50% !important;
-  background: #ffffff !important;
+  border-radius: 8px !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f6f8fb 100%) !important;
   padding: 2.5px !important;
   box-shadow: 0 2px 7px rgba(0, 0, 0, 0.4) !important;
-  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
   transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease !important;
 }
 
@@ -3228,7 +3251,7 @@ textarea.form-control {
 
 .participant-item .logo.xs {
   --s: 22px;
-  border-radius: 50%;
+  border-radius: 6px;
   flex-shrink: 0;
 }
 
@@ -3588,7 +3611,7 @@ textarea.form-control {
   --s: 18px !important;
   width: 18px !important;
   height: 18px !important;
-  border-radius: 50% !important;
+  border-radius: 5px !important;
   padding: 1.5px !important;
 }
 
@@ -3671,7 +3694,7 @@ textarea.form-control {
   --s: 18px !important;
   width: 18px !important;
   height: 18px !important;
-  border-radius: 50% !important;
+  border-radius: 5px !important;
   padding: 1.5px !important;
 }
 
@@ -3744,8 +3767,8 @@ textarea.form-control {
   --s: 56px !important;
   width: 56px !important;
   height: 56px !important;
-  border-radius: 50% !important;
-  padding: 4px !important;
+  border-radius: 14px !important;
+  padding: 5px !important;
 }
 
 .sister-info {
@@ -3810,7 +3833,7 @@ textarea.form-control {
   --s: 14px !important;
   width: 14px !important;
   height: 14px !important;
-  border-radius: 50% !important;
+  border-radius: 4px !important;
   padding: 1px !important;
 }
 
@@ -4263,27 +4286,32 @@ textarea.form-control {
   width: 62px;
   height: 62px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 4px;
   flex-shrink: 0;
-  transition: transform 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .team-directory-card:hover .team-card-crest-box {
-  transform: scale(1.06);
-  border-color: rgba(0, 227, 155, 0.3);
+  transform: scale(1.05);
+  border-color: rgba(0, 227, 155, 0.45);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), 0 0 12px rgba(0, 227, 155, 0.15);
 }
 
 .team-card-crest-box .logo {
-  --s: 54px !important;
-  width: 54px !important;
-  height: 54px !important;
-  border-radius: 50% !important;
-  padding: 3px !important;
+  --s: 52px !important;
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 12px !important;
+  padding: 5px !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f6f8fb 60%, #e9edf5 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
 
 .team-card-badges {
@@ -4472,7 +4500,7 @@ textarea.form-control {
   --s: 13px !important;
   width: 13px !important;
   height: 13px !important;
-  border-radius: 50% !important;
+  border-radius: 4px !important;
   padding: 1px !important;
 }
 
@@ -4844,27 +4872,32 @@ textarea.form-control {
   width: 62px;
   height: 62px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 4px;
   flex-shrink: 0;
-  transition: transform 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .tournament-directory-card:hover .tournament-card-crest-box {
-  transform: scale(1.06);
-  border-color: rgba(255, 178, 30, 0.3);
+  transform: scale(1.05);
+  border-color: rgba(245, 197, 66, 0.45);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), 0 0 12px rgba(245, 197, 66, 0.15);
 }
 
 .tournament-card-crest-box .logo {
-  --s: 54px !important;
-  width: 54px !important;
-  height: 54px !important;
-  border-radius: 50% !important;
-  padding: 3px !important;
+  --s: 52px !important;
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 12px !important;
+  padding: 5px !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f6f8fb 60%, #e9edf5 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
 
 .tournament-card-badges {
@@ -5179,35 +5212,28 @@ a.highlight-team:hover .highlight-team-name {
   }
 }
 
-/* ---------- Responsive ---------- */
+/* ---------- Responsive Breakpoints & Device Adaptations ---------- */
 @media (max-width: 1000px) {
-  .hero-crests { display: none; }
+  .hero-crests { display: none !important; }
   .explore-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .explore-filters .field:first-child { grid-column: span 2; }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 768px) {
   .wrap { padding: 0 14px; }
-  .topbar .wrap {
-    flex-wrap: wrap;
-    height: auto;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    gap: 10px;
-  }
   .brand { font-size: 20px; }
   .topbar-right {
     width: 100%;
     justify-content: space-between;
-    order: 3;
   }
   .search { width: 100%; }
-  .hero { padding: 28px 20px; border-radius: 18px; }
-  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .section-head h2 { font-size: 24px; }
+  .hero { padding: 24px 18px; border-radius: 18px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .section-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .section-head h2 { font-size: 22px; }
   .grid, .honours { grid-template-columns: 1fr; }
-  .detail-head { flex-direction: column; align-items: flex-start; padding: 22px; gap: 18px; }
-  .detail-head .logo.xxl { --s: 104px; border-radius: 24px; }
+  .detail-head { flex-direction: column; align-items: flex-start; padding: 20px; gap: 16px; }
+  .detail-head .logo.xxl { --s: 90px; border-radius: 20px; }
   .reign { grid-template-columns: 1fr; text-align: left; padding: 18px; gap: 14px; }
   .reign .side.r { justify-content: flex-start; text-align: left; flex-direction: row-reverse; }
   .reign .mid { order: -1; text-align: left; display: flex; gap: 10px; align-items: center; }
@@ -5220,4 +5246,56 @@ a.highlight-team:hover .highlight-team-name {
   .roll-row .season { font-size: 20px; }
   .explore-filters { grid-template-columns: 1fr; }
   .explore-filters .field:first-child { grid-column: auto; }
+}
+
+/* Mobile Modals, Forms & Touch Screens */
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+  .modal-dialog {
+    border-radius: 20px 20px 14px 14px;
+    max-width: 100%;
+  }
+  .modal-header {
+    padding: 14px 16px;
+  }
+  .modal-header h3 {
+    font-size: 18px;
+  }
+  .modal-body {
+    padding: 16px;
+    max-height: 75vh;
+    gap: 16px;
+  }
+  .modal-footer {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .modal-footer .btn {
+    flex: 1;
+    min-width: 120px;
+    justify-content: center;
+  }
+  .ref-select-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .btn-ref-create {
+    width: 100%;
+    justify-content: center;
+    height: 40px;
+  }
+  .picklist-popover {
+    max-height: 320px;
+  }
+  .evo-timeline-wrap {
+    padding: 18px 10px 14px;
+  }
+  .sister-teams-grid {
+    grid-template-columns: 1fr !important;
+  }
 }

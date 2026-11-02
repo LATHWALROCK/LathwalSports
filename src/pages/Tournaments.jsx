@@ -288,39 +288,41 @@ export default function Tournaments() {
   }, [sortedTournaments]);
 
   return (
-    <div className="tournaments-page">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="tournaments-header">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="eyebrow">Directory · Global Competitions &amp; Leagues</div>
-          <h1 className="tournaments-title">
-            <span className="bar" />
+          <div className="text-xs font-bold uppercase tracking-widest text-[#8b96ad]">
+            Directory · Global Competitions &amp; Leagues
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-display font-extrabold uppercase tracking-wide flex items-center gap-3 text-white mt-1">
+            <span className="w-1.5 h-7 rounded-full bg-[#00e39b]" />
             Tournaments &amp; Competitions
           </h1>
-          <p className="tournaments-subtitle">
+          <p className="text-xs sm:text-sm text-[#8b96ad] mt-1 ml-4 max-w-2xl">
             Explore world championships, continental cups, and domestic franchise leagues across every sport.
           </p>
         </div>
 
         {/* Admin Create Tournament Action */}
         {isAdmin && (
-          <div className="tournaments-header-actions">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <button
               type="button"
-              className="btn primary"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#f5c542] to-[#ff9f1c] text-[#07090f] font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all cursor-pointer"
               onClick={() => openCreateTournamentModal()}
               title="Add a new tournament or league"
             >
-              <Plus size={16} style={{ display: "inline", verticalAlign: "-2px", marginRight: "4px" }} />
+              <Plus size={16} />
               Add Tournament
             </button>
             <button
               type="button"
-              className="btn ghost"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#121826] border border-[#232c40] hover:border-[#36425e] text-white font-semibold text-xs transition-all cursor-pointer"
               onClick={() => openAddEditionModal()}
               title="Add an edition to a competition"
             >
-              <Plus size={16} style={{ display: "inline", verticalAlign: "-2px", marginRight: "4px" }} />
+              <Plus size={16} />
               Add Edition
             </button>
           </div>
@@ -328,41 +330,37 @@ export default function Tournaments() {
       </div>
 
       {/* Overview Stat Counters Bar */}
-      <div className="tournaments-metrics-bar">
-        <div className="metric-item">
-          <b>{sortedTournaments.length}</b>
-          <span>Competitions</span>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4 p-3.5 sm:p-5 rounded-2xl bg-[#0d111b] border border-[#232c40]">
+        <div className="p-2 sm:p-2.5 text-center sm:text-left">
+          <b className="block text-xl sm:text-2xl font-display font-extrabold text-white leading-none">{sortedTournaments.length}</b>
+          <span className="text-[11px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">Competitions</span>
         </div>
-        <div className="metric-divider" />
-        <div className="metric-item">
-          <b>{internationalCount}</b>
-          <span>International</span>
+        <div className="p-2 sm:p-2.5 text-center sm:text-left border-l border-[#232c40]/60">
+          <b className="block text-xl sm:text-2xl font-display font-extrabold text-white leading-none">{internationalCount}</b>
+          <span className="text-[11px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">International</span>
         </div>
-        <div className="metric-divider" />
-        <div className="metric-item">
-          <b>{leagueCount}</b>
-          <span>Club Leagues</span>
+        <div className="p-2 sm:p-2.5 text-center sm:text-left border-l border-[#232c40]/60">
+          <b className="block text-xl sm:text-2xl font-display font-extrabold text-white leading-none">{leagueCount}</b>
+          <span className="text-[11px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">Club Leagues</span>
         </div>
-        <div className="metric-divider" />
-        <div className="metric-item">
-          <b>{sportsRepresented}</b>
-          <span>Sports Represented</span>
+        <div className="p-2 sm:p-2.5 text-center sm:text-left border-l border-[#232c40]/60">
+          <b className="block text-xl sm:text-2xl font-display font-extrabold text-white leading-none">{sportsRepresented}</b>
+          <span className="text-[11px] sm:text-xs text-[#8b96ad] font-semibold uppercase tracking-wider mt-1 block">Sports</span>
         </div>
-        <div className="metric-divider" />
-        <div className="metric-item gold">
-          <b>🏅 {totalEditionsRecorded}</b>
-          <span>Editions Recorded</span>
+        <div className="p-2 sm:p-2.5 text-center sm:text-left border-l border-[#232c40]/60 col-span-2 sm:col-span-1">
+          <b className="block text-xl sm:text-2xl font-display font-extrabold text-[#f5c542] leading-none">🏅 {totalEditionsRecorded}</b>
+          <span className="text-[11px] sm:text-xs text-[#f5c542] font-semibold uppercase tracking-wider mt-1 block">Editions</span>
         </div>
       </div>
 
-      {/* Main Filter Bar (Spacious 3-4 columns layout) */}
-      <div className="tournaments-filters-panel">
-        <div className="tournaments-filters-grid">
+      {/* Main Filter Bar */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-[#0d111b] border border-[#232c40] space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Row 1: Search (span 2) | Sport (span 1) | Format (span 1) */}
-          <div className="tournaments-field search-field">
-            <label htmlFor="tournament-search">Search Competitions</label>
-            <div className="tournaments-search-wrap">
-              <Search size={16} className="tournaments-search-icon" />
+          <div className="sm:col-span-2 flex flex-col gap-1.5">
+            <label htmlFor="tournament-search" className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Search Competitions</label>
+            <div className="relative">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5d6880]" />
               <input
                 id="tournament-search"
                 type="search"
@@ -370,11 +368,12 @@ export default function Tournaments() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoComplete="off"
+                className="w-full h-11 pl-10 pr-9 rounded-xl bg-[#121826] border border-[#232c40] text-sm text-white placeholder-[#5d6880] focus:border-[#00e39b] focus:outline-none transition-colors"
               />
               {searchQuery && (
                 <button
                   type="button"
-                  className="tournaments-search-clear"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8b96ad] hover:text-white"
                   onClick={() => setSearchQuery("")}
                   title="Clear search"
                 >
@@ -384,8 +383,8 @@ export default function Tournaments() {
             </div>
           </div>
 
-          <div className="tournaments-field">
-            <label>Sport</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Sport</label>
             <Picklist
               value={selectedSport}
               onChange={(val) => setSelectedSport(val)}
@@ -394,8 +393,8 @@ export default function Tournaments() {
             />
           </div>
 
-          <div className="tournaments-field">
-            <label>Format / Type</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Format / Type</label>
             <Picklist
               value={selectedType}
               onChange={(val) => setSelectedType(val)}
@@ -405,8 +404,8 @@ export default function Tournaments() {
           </div>
 
           {/* Row 2: Status (span 2) | Sort By (span 2) */}
-          <div className="tournaments-field half-field">
-            <label>Editions Recorded</label>
+          <div className="sm:col-span-2 lg:col-span-2 flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Editions Recorded</label>
             <Picklist
               value={selectedStatus}
               onChange={(val) => setSelectedStatus(val)}
@@ -415,8 +414,8 @@ export default function Tournaments() {
             />
           </div>
 
-          <div className="tournaments-field half-field">
-            <label>Sort By</label>
+          <div className="sm:col-span-2 lg:col-span-2 flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-[#8b96ad]">Sort By</label>
             <Picklist
               value={sortBy}
               onChange={(val) => setSortBy(val)}
@@ -428,41 +427,41 @@ export default function Tournaments() {
 
         {/* Active Filter Chips & Reset Bar */}
         {isFiltered && (
-          <div className="tournaments-active-bar">
-            <div className="tournaments-active-chips">
-              <span className="tournaments-chips-label">Active Filters:</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#232c40]/60">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold uppercase text-[#5d6880]">Active Filters:</span>
 
               {searchQuery && (
-                <span className="tournaments-filter-pill">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] border border-[#232c40] text-[#eef2f8]">
                   Search: "{searchQuery}"
-                  <button type="button" onClick={() => setSearchQuery("")}>
+                  <button type="button" onClick={() => setSearchQuery("")} className="hover:text-red-400">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {selectedSport !== "all" && (
-                <span className="tournaments-filter-pill">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] border border-[#232c40] text-[#00e39b]">
                   Sport: {sports.find((s) => s._id === selectedSport)?.name || selectedSport}
-                  <button type="button" onClick={() => setSelectedSport("all")}>
+                  <button type="button" onClick={() => setSelectedSport("all")} className="hover:text-red-400">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {selectedType !== "all" && (
-                <span className="tournaments-filter-pill">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] border border-[#232c40] text-[#ffb21e]">
                   Format: {selectedType === "League" ? "Club / Franchise Leagues" : "International Tournaments"}
-                  <button type="button" onClick={() => setSelectedType("all")}>
+                  <button type="button" onClick={() => setSelectedType("all")} className="hover:text-red-400">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {selectedStatus !== "all" && (
-                <span className="tournaments-filter-pill">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#121826] border border-[#232c40] text-[#f5c542]">
                   Status: {statusOptions.find((s) => s.value === selectedStatus)?.label}
-                  <button type="button" onClick={() => setSelectedStatus("all")}>
+                  <button type="button" onClick={() => setSelectedStatus("all")} className="hover:text-red-400">
                     <X size={12} />
                   </button>
                 </span>
@@ -471,7 +470,7 @@ export default function Tournaments() {
 
             <button
               type="button"
-              className="tournaments-reset-btn"
+              className="text-xs text-[#8b96ad] hover:text-white font-semibold underline underline-offset-2 transition-colors ml-auto cursor-pointer"
               onClick={handleResetFilters}
             >
               Reset All Filters
@@ -481,18 +480,22 @@ export default function Tournaments() {
       </div>
 
       {/* Results Header */}
-      <div className="tournaments-results-header">
+      <div className="flex items-center justify-between mt-6 mb-4">
         <div>
-          <span className="results-count">
-            Showing <strong>{displayedTournaments.length}</strong> of <strong>{sortedTournaments.length}</strong> competitions
+          <span className="text-xs sm:text-sm text-[#8b96ad]">
+            Showing <strong className="text-white">{displayedTournaments.length}</strong> of <strong className="text-white">{sortedTournaments.length}</strong> competitions
           </span>
-          {isFiltered && <span className="results-filter-badge">Filtered</span>}
+          {isFiltered && (
+            <span className="ml-2.5 text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#00e39b]/15 text-[#00e39b] border border-[#00e39b]/30">
+              Filtered
+            </span>
+          )}
         </div>
       </div>
 
       {/* Tournaments Grid */}
       {displayedTournaments.length > 0 ? (
-        <div className="tournaments-grid">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
           {displayedTournaments.map((tour) => {
             const isLeague = tour.type === "League";
             const stats = tournamentStatsMap.get(String(tour._id)) || {

@@ -307,7 +307,7 @@ export default function CreateTeamModal() {
             </div>
 
             {/* Team Name & Common Identifier */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div className="form-group">
                 <label htmlFor="team-name">Team Name *</label>
                 <input
@@ -361,7 +361,7 @@ export default function CreateTeamModal() {
             </div>
 
             {/* Type & Location */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div className="form-group">
                 <label>Team Type *</label>
                 <Picklist
@@ -511,7 +511,7 @@ export default function CreateTeamModal() {
                   )}
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "10px" }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2.5">
                   <div className="form-group" style={{ margin: 0 }}>
                     <label htmlFor="group-name" style={{ fontSize: "12px" }}>Group Display Name</label>
                     <input
